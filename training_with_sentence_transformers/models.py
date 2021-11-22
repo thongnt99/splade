@@ -69,7 +69,11 @@ class MLMTransformer(nn.Module):
         self.do_lower_case = do_lower_case
 
         config = AutoConfig.from_pretrained(model_name_or_path, **model_args, cache_dir=cache_dir)
-        self.auto_model = torch.nn.DataParallel(AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir))
+        model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
+        model._init_weights(model.vocab_transform)
+        model._init_weights(model.vocab_layer_norm)
+        model._init_weights(model.vocab_projector)
+        self.auto_model = torch.nn.DataParallel(model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
         
