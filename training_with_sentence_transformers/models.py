@@ -240,7 +240,7 @@ class MLMTransformerDense(nn.Module):
             features.update({'all_layer_embeddings': hidden_states})
 
         features = self.pooling(features)
-        dense_feature  = self.densifier(features)
+        features["sentence_embedding"]  = self.densifier(features["sentence_embedding"])
         return dense_feature
 
     def get_word_embedding_dimension(self) -> int:
