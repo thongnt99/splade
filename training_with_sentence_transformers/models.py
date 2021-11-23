@@ -71,6 +71,7 @@ class MLMTransformer(nn.Module):
         config = AutoConfig.from_pretrained(model_name_or_path, **model_args, cache_dir=cache_dir)
         model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
         if scratch:
+            print("Ramdomly initialize MLM head")      
             model._init_weights(model.vocab_transform)
             model._init_weights(model.vocab_layer_norm)
             model._init_weights(model.vocab_projector)
