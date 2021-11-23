@@ -191,7 +191,7 @@ class MLMTransformerDense(nn.Module):
                  model_args: Dict = {}, cache_dir: Optional[str] = None,
                  tokenizer_args: Dict = {}, do_lower_case: bool = False,
                  tokenizer_name_or_path : str = None, scratch: bool = False, dense_dim: int = 100):
-        super(MLMTransformer, self).__init__()
+        super(MLMTransformerDense, self).__init__()
         self.config_keys = ['max_seq_length', 'do_lower_case']
         self.do_lower_case = do_lower_case
 
