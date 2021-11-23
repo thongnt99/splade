@@ -241,7 +241,7 @@ class MLMTransformerDense(nn.Module):
 
         features = self.pooling(features)
         features["sentence_embedding"]  = self.densifier(features["sentence_embedding"])
-        return dense_feature
+        return features
 
     def get_word_embedding_dimension(self) -> int:
             return self.auto_model.module.config.vocab_size
