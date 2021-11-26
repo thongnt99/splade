@@ -205,7 +205,7 @@ class MLMTransformerDense(nn.Module):
         self.auto_model = torch.nn.DataParallel(model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
-        self.densifier = torch.nn.DataParallel(torch.nn.Linear(self.get_word_embedding_dimension(), 100))
+        self.densifier = torch.nn.DataParallel(torch.nn.Linear(self.get_word_embedding_dimension(), dense_dim))
         
         # No max_seq_length set. Try to infer from model
         if max_seq_length is None:
