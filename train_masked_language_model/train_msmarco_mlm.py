@@ -359,7 +359,7 @@ def main():
     logger.info("Ramdomly initialize MLM head")      
     model._init_weights(model.vocab_transform)
     model._init_weights(model.vocab_layer_norm)
-    model._init_weights(model.vocab_projector)}
+    model._init_weights(model.vocab_projector)
     model.resize_token_embeddings(len(tokenizer))
 
     # Preprocessing the datasets.
