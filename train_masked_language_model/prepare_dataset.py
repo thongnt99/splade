@@ -33,7 +33,7 @@ with open(args.query_path, "r", encoding="utf-8") as fp:
 
 # shuffle data 
 indices = list(range(len(collections)))
-indices = np.random.shuffle(indices)
+np.random.shuffle(indices)
 
 # spliting data
 n_train = int(len(collections)*0.7)
