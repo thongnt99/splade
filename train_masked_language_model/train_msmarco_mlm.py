@@ -272,6 +272,12 @@ def main():
 
     model.resize_token_embeddings(len(tokenizer))
 
+    ############Randomly initialize LMHeads
+    print("Ramdomly initialize MLM head")      
+    model._init_weights(model.vocab_transform)
+    model._init_weights(model.vocab_layer_norm)
+    model._init_weights(model.vocab_projector)
+
     if config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm:
         raise ValueError(
             "BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the"
