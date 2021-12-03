@@ -54,10 +54,10 @@ dense_dim = args.dense_dim # Dimension of the dense output
 
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.MLMTransformerDense(model_name, max_seq_length=max_seq_length, dense_dim=dense_dim)
+word_embedding_model = models.MLMTransformerDense(model_name, max_seq_length=max_seq_length, dense_dim=dense_dim, free_checkpoint=True)
 model = SentenceTransformer(modules=[word_embedding_model])
 
-model_save_path = f'output/distilDenseSplade_{args.lambda_q}_{args.lambda_d}_{model_name.replace("/", "-")}-dense_dim_{dense_dim}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+model_save_path = f'output/distilDenseSplade_{args.lambda_q}_{args.lambda_d}_{model_name.replace("/", "-")}-dense_dim_{dense_dim}-batch_size_{train_batch_size}-free_checkpoint_{free_checkpoint}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
 # Write self to path
 os.makedirs(model_save_path, exist_ok=True)
