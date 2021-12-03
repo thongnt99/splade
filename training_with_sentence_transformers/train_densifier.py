@@ -51,10 +51,10 @@ max_seq_length = args.max_seq_length  # Max length for passages. Increasing it i
 num_negs_per_system = args.num_negs_per_system  # We used different systems to mine hard negatives. Number of hard negatives to add from each system
 num_epochs = args.epochs  # Number of epochs we want to train
 dense_dim = args.dense_dim # Dimension of the dense output
-
+free_checkpoint = True # free checkpoint, only train densifier
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.MLMTransformerDense(model_name, max_seq_length=max_seq_length, dense_dim=dense_dim, free_checkpoint=True)
+word_embedding_model = models.MLMTransformerDense(model_name, max_seq_length=max_seq_length, dense_dim=dense_dim, free_checkpoint=free_checkpoint)
 model = SentenceTransformer(modules=[word_embedding_model])
 
 model_save_path = f'output/distilDenseSplade_{args.lambda_q}_{args.lambda_d}_{model_name.replace("/", "-")}-dense_dim_{dense_dim}-batch_size_{train_batch_size}-free_checkpoint_{free_checkpoint}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
