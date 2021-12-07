@@ -66,12 +66,13 @@ class MarginMSELossJointDenseSparse(nn.Module):
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
         # sentence_features: query, positive passage, negative passage
-        sparse_reps = [self.model(sentence_feature)['sentence_embedding'] for sentence_feature in sentence_features]
+        reps = [self.model(sentence_feature) for sentence_feature in sentence_features]
+        sparse_reps = [rep["sentence_embedding"] for rep in reps]
         sparse_embeddings_query = sparse_reps[0]
         sparse_embeddings_pos = sparse_reps[1]
         sparse_embeddings_neg = sparse_reps[2]
 
-        dense_reps = [self.model(sentence_feature)['mean_dense_embedding'] for sentence_feature in sentence_features]
+        dense_reps = [rep['mean_dense_embedding'] for rep in reps]
         dense_embeddings_query = dense_reps[0]
         dense_embeddings_pos = dense_reps[1]
         dense_embeddings_neg = dense_reps[2]
