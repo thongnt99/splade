@@ -16,7 +16,7 @@ class MeanPooling(nn.Module):
         self.config_keys = ["embedding_dimension"]
     
     def __repr_(self):
-        retunr "Mean Pooling ({})"
+        return "Mean Pooling ({})"
     
     def get_pooling_mode_str(self) -> str: 
         return "Mean Pooling"
