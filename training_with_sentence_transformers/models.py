@@ -381,7 +381,7 @@ class JointDenseSparse(nn.Module):
         if 'token_type_ids' in features:
             trans_features['token_type_ids'] = features['token_type_ids']
 
-        output = self.auto_model(**trans_features, return_dict=True)
+        output = self.auto_model(**trans_features, return_dict=True, output_hidden_states=True)
         output_tokens = output.logits
         last_hidden_states = output.hidden_states[-1]
 
