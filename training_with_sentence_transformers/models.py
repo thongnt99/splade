@@ -176,7 +176,6 @@ class MLMTransformer(nn.Module):
 class MLMTransformerDense(nn.Module):
     """Huggingface AutoModel to generate token embeddings.
     Loads the correct class, e.g. BERT / RoBERTa etc.
-
     :param model_name_or_path: Huggingface models name (https://huggingface.co/models)
     :param max_seq_length: Truncate any inputs longer than max_seq_length
     :param model_args: Arguments (key, value pairs) passed to the Huggingface Transformers model
@@ -221,7 +220,7 @@ class MLMTransformerDense(nn.Module):
             self.auto_model.config.tokenizer_class = self.tokenizer.__class__.__name__
 
     def __repr__(self):
-        return "MLMTransformer({}) with Transformer model: {} ".format(self.get_config_dict(), self.auto_model.__class__.__name__)
+        return "MLMTransformerDense({}) with Transformer model: {} ".format(self.get_config_dict(), self.auto_model.__class__.__name__)
 
     def forward(self, features):
         """Returns token_embeddings, cls_token"""
@@ -301,4 +300,5 @@ class MLMTransformerDense(nn.Module):
 
         with open(sbert_config_path) as fIn:
             config = json.load(fIn)
-        return MLMTransformer(model_name_or_path=input_path, **config)        
+        return MLMTransformerDense(model_name_or_path=input_path, **config)        
+
