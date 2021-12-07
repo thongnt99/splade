@@ -26,6 +26,7 @@ class MeanPooling(nn.Module):
         attention_mask = features["attention_mask"].unsqueeze(-1)
         mean_embedding = torch.mean(last_hidden_states*attention_mask, dim=1)
         features.update({"mean_dense_embedding": mean_embedding})
+        return features
     
     def get_embedding_dimension(self):
         return self.embedding_dimension
