@@ -388,8 +388,7 @@ class JointDenseSparse(nn.Module):
         features.update({'token_embeddings': output_tokens, 'attention_mask': features['attention_mask'], "last_hidden_states": last_hidden_states})
         # enrich features with dense and sparse embedding
         features = self.sparse_pooling(features)
-        features = self.dense_pooling(features)
-        features["sentence_embedding"]  = self.densifier(features["sentence_embedding"])        
+        features = self.dense_pooling(features)        
         return features
 
     def get_sparse_dimension(self) -> int:
