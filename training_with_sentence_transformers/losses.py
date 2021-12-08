@@ -121,7 +121,7 @@ class MarginMSELossJointDenseSparse(nn.Module):
         dense_loss = self.loss_fct(dense_margin_pred, labels)
         sparse_loss = self.loss_fct(sparse_margin_pred, labels)
         print(f"Dense loss: {dense_loss} Sparse loss: {sparse_loss}\n")
-        return dense_loss + ssparse_loss + flops_doc + flops_query
+        return dense_loss + sparse_loss + flops_doc + flops_query
 
 class MarginMSELossSplade(nn.Module):
     """
