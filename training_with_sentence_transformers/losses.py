@@ -90,8 +90,8 @@ class MarginMSELossJointDenseSparse(nn.Module):
         #TODO: to force similar prediction for dense and sparse 
         dense_loss = self.loss_fct(dense_margin_pred, labels)
         sparse_loss = self.loss_fct(sparse_margin_pred, labels)
-        print(f"Dense loss: {dense_loss} Sparse loss: {sparse_loss}")
-        return self.loss_fct(sparse_margin_pred, labels) + self.loss_fct(dense_margin_pred, labels) + flops_doc + flops_query
+        print(f"Dense loss: {dense_loss} Sparse loss: {sparse_loss}\n")
+        return dense_loss + ssparse_loss + flops_doc + flops_query
 
 class MarginMSELossSplade(nn.Module):
     """
