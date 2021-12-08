@@ -45,6 +45,34 @@ class FLOPS:
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
+class DenseLoss:
+    def __init__(self, model, similarity_fct = pairwise_dot_score):
+        """
+        :param model: SentenceTransformerModel
+        :param similarity_fct:  Which similarity function to use
+        """
+        super(MarginMSELossJointDenseSparse, self).__init__()
+        self.model = model
+        self.similarity_fct = similarity_fct
+        self.loss_fct = nn.MSELoss()
+
+    def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
+        # sentence_features: query, positive passage, negative passage
+        reps = [self.model(sentence_feature) for sentence_feature in sentence_features]
+
+        dense_reps = [rep['mean_dense_embedding'] for rep in reps]
+        dense_embeddings_query = dense_reps[0]
+        dense_embeddings_pos = dense_reps[1]
+        dense_embeddings_neg = dense_reps[2]
+
+        dense_scores_pos = self.similarity_fct(dense_embeddings_query, dense_embeddings_pos)
+        dense_scores_neg = self.similarity_fct(dense_embeddings_query, dense_embeddings_neg)
+        dense_margin_pred = dense_scores_pos - dense_scores_neg
+
+        dense_loss = self.loss_fct(dense_margin_pred, labels)        
+        print(f"Dense loss: {dense_loss}")
+        return dense_loss
+
 class MarginMSELossJointDenseSparse(nn.Module):
     """
     Compute the MSE loss between the |sim(Query, Pos) - sim(Query, Neg)| and |gold_sim(Q, Pos) - gold_sim(Query, Neg)|
@@ -79,11 +107,13 @@ class MarginMSELossJointDenseSparse(nn.Module):
 
         sparse_scores_pos = self.similarity_fct(sparse_embeddings_query, sparse_embeddings_pos)
         sparse_scores_neg = self.similarity_fct(sparse_embeddings_query, sparse_embeddings_neg)
-        sparse_margin_pred = sparse_scores_pos - sparse_scores_neg
+        #normalize dot product by dimension
+        sparse_margin_pred = (sparse_scores_pos - sparse_scores_neg)/sparse_embeddings_neg.size(1)
 
         dense_scores_pos = self.similarity_fct(dense_embeddings_query, dense_embeddings_pos)
         dense_scores_neg = self.similarity_fct(dense_embeddings_query, dense_embeddings_neg)
-        dense_margin_pred = dense_scores_pos - dense_scores_neg
+        #normalize dot product by dimension
+        dense_margin_pred = (dense_scores_pos - dense_scores_neg)/dense_embeddings_neg.size(1)
 
         flops_doc = self.lambda_d*(self.FLOPS(sparse_embeddings_pos) + self.FLOPS(sparse_embeddings_neg))
         flops_query = self.lambda_q*(self.FLOPS(sparse_embeddings_query))
