@@ -88,6 +88,9 @@ class MarginMSELossJointDenseSparse(nn.Module):
         flops_doc = self.lambda_d*(self.FLOPS(sparse_embeddings_pos) + self.FLOPS(sparse_embeddings_neg))
         flops_query = self.lambda_q*(self.FLOPS(sparse_embeddings_query))
         #TODO: to force similar prediction for dense and sparse 
+        dense_loss = self.loss_fct(dense_margin_pred, labels)
+        sparse_loss = self.loss_fct(sparse_margin_pred, labels)
+        print(f"Dense loss: {dense_loss} Sparse loss: {sparse_loss}")
         return self.loss_fct(sparse_margin_pred, labels) + self.loss_fct(dense_margin_pred, labels) + flops_doc + flops_query
 
 class MarginMSELossSplade(nn.Module):
@@ -121,8 +124,7 @@ class MarginMSELossSplade(nn.Module):
         margin_pred = scores_pos - scores_neg
 
         flops_doc = self.lambda_d*(self.FLOPS(embeddings_pos) + self.FLOPS(embeddings_neg))
-        flops_query = self.lambda_q*(self.FLOPS(embeddings_query))
-
+        flops_query = self.lambda_q*(self.FLOPS(embeddings_query))        
         return self.loss_fct(margin_pred, labels) + flops_doc + flops_query
 
 class MultipleNegativesRankingLossSplade(nn.Module):
