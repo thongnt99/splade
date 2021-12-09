@@ -209,7 +209,7 @@ dense_train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=trai
 # train_loss = losses.MarginMSELossJointDenseSparse(model=model, lambda_d=args.lambda_d, lambda_q=args.lambda_q)
 
 dense_loss = losses.DenseLoss(model=model)
-sparse_loss = losses.MarginMSELossSplade(mode=model, lambda_d=args.lambda_d, lambda_q=args.lambda_q)
+sparse_loss = losses.MarginMSELossSplade(model=model, lambda_d=args.lambda_d, lambda_q=args.lambda_q)
 
 # Train the model
 model.fit(train_objectives=[(sparse_train_dataloader, sparse_loss), (dense_train_dataloader, dense_loss)],
