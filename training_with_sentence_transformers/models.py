@@ -24,7 +24,7 @@ class MeanPooling(nn.Module):
     def forward(self, features: Dict[str, Tensor]):    
         last_hidden_states = features["last_hidden_states"] # first dim: batch, second dim: seq len, third dim: vector length
         attention_mask = features["attention_mask"].unsqueeze(-1)
-        seq_lens = torch.clamp(attention_mask.sum(1), min=1e-9)
+        seq_lens = torch.clamp(attention_mask.sum(dim=1), min=1e-9)
         mean_embedding = torch.sum(last_hidden_states*attention_mask, dim=1)/seq_lens
         features.update({"mean_dense_embedding": mean_embedding})
         return features
