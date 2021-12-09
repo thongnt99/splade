@@ -123,7 +123,7 @@ class MarginMSELossJointDenseSparse(nn.Module):
         print(f"Dense loss: {dense_loss} Sparse loss: {sparse_loss} flops_doc {flops_doc} flops_query {flops_query}\n")
         return dense_loss + sparse_loss + flops_doc + flops_query
 
-class MarginMSELossMarginMSELossSplade(nn.Module):
+class MarginMSELossSplade(nn.Module):
     """
     Compute the MSE loss between the |sim(Query, Pos) - sim(Query, Neg)| and |gold_sim(Q, Pos) - gold_sim(Query, Neg)|
     By default, sim() is the dot-product
