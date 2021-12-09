@@ -51,7 +51,7 @@ class DenseLoss:
         :param model: SentenceTransformerModel
         :param similarity_fct:  Which similarity function to use
         """
-        super(MarginMSELossJointDenseSparse, self).__init__()
+        super(DenseLoss, self).__init__()
         self.model = model
         self.similarity_fct = similarity_fct
         self.loss_fct = nn.MSELoss()
@@ -123,7 +123,7 @@ class MarginMSELossJointDenseSparse(nn.Module):
         print(f"Dense loss: {dense_loss} Sparse loss: {sparse_loss} flops_doc {flops_doc} flops_query {flops_query}\n")
         return dense_loss + sparse_loss + flops_doc + flops_query
 
-class MarginMSELossSplade(nn.Module):
+class MarginMSELossMarginMSELossSplade(nn.Module):
     """
     Compute the MSE loss between the |sim(Query, Pos) - sim(Query, Neg)| and |gold_sim(Q, Pos) - gold_sim(Query, Neg)|
     By default, sim() is the dot-product
