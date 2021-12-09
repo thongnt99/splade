@@ -45,7 +45,7 @@ class FLOPS:
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
-class DenseLoss:
+class DenseLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score):
         """
         :param model: SentenceTransformerModel
