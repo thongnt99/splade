@@ -156,7 +156,7 @@ class MarginMSELossSplade(nn.Module):
         flops_doc = self.lambda_d*(self.FLOPS(embeddings_pos) + self.FLOPS(embeddings_neg))
         flops_query = self.lambda_q*(self.FLOPS(embeddings_query)) 
         sparse_loss = self.loss_fct(margin_pred, labels)
-        print("Sparse loss {sparse_loss} flops_doc {flops_doc} flops_query {flops_query} ")       
+        print(f"Sparse loss {sparse_loss} flops_doc {flops_doc} flops_query {flops_query} ")       
         return self.loss_fct(margin_pred, labels) + flops_doc + flops_query
 
 class MultipleNegativesRankingLossSplade(nn.Module):
