@@ -495,7 +495,7 @@ class TransformerExtraVocab(nn.Module):
             model._init_weights(model.vocab_projector)
         self.auto_model = torch.nn.DataParallel(model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
-        self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
+        self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension()+extra_vocab)) 
         self.extra_vocab = torch.nn.DataParallel(ExtraVocab(n_vocab=extra_vocab))
         # No max_seq_length set. Try to infer from model
         if max_seq_length is None:
@@ -520,11 +520,11 @@ class TransformerExtraVocab(nn.Module):
         output_tokens = output_states.logits 
         last_hidden_states = output_states.hidden_states[-1]
         extra_tokens = self.extra_vocab(last_hidden_states)
-        output_tokens = torch.cat([output_tokens, extra_tokens], dim=1)
-        extra_mask = torch.ones((extra_tokens.size(0), extra_tokens.size(1)))
-        mask = torch.cat([features['attention_mask'], extra_mask], dim=1)
+        output_tokens = torch.cat([output_tokens, extra_tokens], dim=-1)
+        # extra_mask = torch.ones((extra_tokens.size(0), extra_tokens.size(1)))
+        # mask = torch.cat([features['attention_mask'], extra_mask], dim=1)
 
-        features.update({'token_embeddings': output_tokens, 'attention_mask': mask})
+        features.update({'token_embeddings': output_tokens, 'attention_mask': features['attention_mask']})
 
         if self.auto_model.module.config.output_hidden_states:
             all_layer_idx = 2
