@@ -153,11 +153,11 @@ class MarginMSELossSplade(nn.Module):
         scores_neg = self.similarity_fct(embeddings_query, embeddings_neg)
         margin_pred = scores_pos - scores_neg
 
-        flops_doc = self.lambda_d*(self.FLOPS(embeddings_pos) + self.FLOPS(embeddings_neg))
-        flops_query = self.lambda_q*(self.FLOPS(embeddings_query)) 
+        flops_doc = self.FLOPS(embeddings_pos) + self.FLOPS(embeddings_neg)
+        flops_query = (self.FLOPS(embeddings_query)) 
         sparse_loss = self.loss_fct(margin_pred, labels)
         print(f"Sparse loss {sparse_loss} flops_doc {flops_doc} flops_query {flops_query} ")       
-        return self.loss_fct(margin_pred, labels) + flops_doc + flops_query
+        return self.loss_fct(margin_pred, labels) + self.lambda_d*flops_doc + self.lambda_q*flops_query
 
 class MultipleNegativesRankingLossSplade(nn.Module):
     """
