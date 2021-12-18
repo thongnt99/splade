@@ -747,6 +747,8 @@ class TransformationModel(nn.Module):
         self.dense_model = torch.nn.DataParallel(dense_model)
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
+
+        # linear transformation from dense to sparse
         self.dense_to_sparse = torch.nn.DataParallel(torch.nn.Linear(768, self.get_word_embedding_dimension()))
         self.max_seq_length = max_seq_length
 
