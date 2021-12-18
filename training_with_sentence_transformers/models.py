@@ -776,7 +776,7 @@ class TransformationModel(nn.Module):
         return features
 
     def get_word_embedding_dimension(self) -> int:
-            return self.auto_model.module.config.vocab_size
+            return self.sparse_model.module.config.vocab_size
         
     def tokenize(self, texts: Union[List[str], List[Dict], List[Tuple[str, str]]]):
         """
