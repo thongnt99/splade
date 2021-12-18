@@ -45,6 +45,42 @@ class FLOPS:
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
+class TransformationLoss(nn.Module):
+    def __init__(self, model, similarity_fct = pairwise_dot_score):
+        """
+        :param model: SentenceTransformerModel
+        :param similarity_fct:  Which similarity function to use
+        """
+        super(DenseLoss, self).__init__()
+        self.model = model
+        self.similarity_fct = similarity_fct
+        self.loss_fct = nn.MSELoss()
+
+    def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
+        # sentence_features: query, positive passage, negative passage
+        reps = [self.model(sentence_feature) for sentence_feature in sentence_features]
+
+        sparse_reps = [rep["sentence_embedding"] for rep in reps]
+        sparse_query = sparse_reps[0]
+        sparse_pos = sparse_reps[1]
+        sparse_neg = sparse_reps[2]
+
+        sparse_from_dense = [rep["sparse_from_dense"] for rep in reps]
+        sparse_from_dense_query = sparse_from_dense[0]
+        sparse_from_dense_pos = sparse_from_dense[1]
+        sparse_from_dense_neg = sparse_from_dense[2]
+
+        sparse_scores_pos = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_pos)
+        sparse_scores_neg = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_neg)
+        sparse_margin_pred = sparse_scores_pos - sparse_scores_neg
+        sparse_loss = self.loss_fct(sparse_margin_pred, labels)        
+        # transformation loss 
+        query_mse = self.loss_fct(sparse_from_dense_query, sparse_query)
+        pos_mse =  self.loss_fct(sparse_from_dense_pos, sparse_pos) 
+        neg_mse = self.loss_fct(sparse_from_dense_neg, sparse_neg) 
+        print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse}")
+        return sparse_loss + (query_mse + pos_mse + neg_mse)/3
+
 class DenseLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score):
         """
