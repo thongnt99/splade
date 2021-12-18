@@ -51,7 +51,7 @@ class TransformationLoss(nn.Module):
         :param model: SentenceTransformerModel
         :param similarity_fct:  Which similarity function to use
         """
-        super(DenseLoss, self).__init__()
+        super(TransformationLoss, self).__init__()
         self.model = model
         self.similarity_fct = similarity_fct
         self.loss_fct = nn.MSELoss()
