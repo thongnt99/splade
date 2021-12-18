@@ -704,3 +704,128 @@ class StaticEmbedding(nn.Module):
         with open(sbert_config_path) as fIn:
             config = json.load(fIn)
         return StaticEmbedding(model_name_or_path=input_path, **config)
+
+
+
+
+class TransformationModel(nn.Module):
+    """
+    Huggingface AutoModel to generate token embeddings.
+    Loads the correct class, e.g. BERT / RoBERTa etc.
+
+    :param sparse_model_name_or_path: Huggingface models name (https://huggingface.co/models)
+    :param dense_model_name_or_path: Huggingface models name (https://huggingface.co/models)
+    :param max_seq_length: Truncate any inputs longer than max_seq_length
+    :param model_args: Arguments (key, value pairs) passed to the Huggingface Transformers model
+    :param cache_dir: Cache dir for Huggingface Transformers to store/load models
+    :param tokenizer_args: Arguments (key, value pairs) passed to the Huggingface Tokenizer model
+    :param do_lower_case: If true, lowercases the input (independent if the model is cased or not)
+    :param tokenizer_name_or_path: Name or path of the tokenizer. When None, then model_name_or_path is used
+    """
+    def __init__(self, sparse_model_name_or_path: str, dense_model_name_or_path: str,  max_seq_length: Optional[int] = None,
+                 model_args: Dict = {}, cache_dir: Optional[str] = None,
+                 tokenizer_args: Dict = {}, do_lower_case: bool = False):
+        super(TransformationModel, self).__init__()
+        self.config_keys = ['max_seq_length', 'do_lower_case']
+        self.do_lower_case = do_lower_case
+
+        # sparse splade model
+        sparse_config = AutoConfig.from_pretrained(sparse_model_name_or_path, **model_args, cache_dir=cache_dir)
+        sparse_model = AutoModelForMaskedLM.from_pretrained(sparse_model_name_or_path, config=sparse_config, cache_dir=cache_dir)
+        for param in sparse_model.parameters():
+            param.requires_grad = False 
+        self.sparse_model = torch.nn.DataParallel(sparse_model)
+        self.sparse_tokenizer = AutoTokenizer.from_pretrained(sparse_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
+        self.max_pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension()))
+
+        
+        # dense model
+        dense_config = AutoConfig.from_pretrained(dense_model_name_or_path, **model_args, cache_dir=cache_dir)
+        dense_model = AutoModel.from_pretrained(dense_model_name_or_path, config=dense_config, cache_dir=cache_dir)
+        for param in dense_model.parameters():
+            param.requires_grad = False
+        self.dense_model = torch.nn.DataParallel(dense_model)
+        self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
+        self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
+        self.dense_to_sparse = torch.nn.DataParallel(torch.nn.Linear(768, self.get_word_embedding_dimension()))
+        self.max_seq_length = max_seq_length
+
+    def __repr__(self):
+        return "StaticEmbedding ({}) with Transformer model: {} ".format(self.get_config_dict(), self.auto_model.__class__.__name__)
+
+    def forward(self, features):
+        """Returns token_embeddings, cls_token"""
+        trans_features = {'input_ids': features['input_ids'], 'attention_mask': features['attention_mask']}
+        if 'token_type_ids' in features:
+            trans_features['token_type_ids'] = features['token_type_ids']
+        # dense representation 
+        last_hidden_state = self.dense_model(**trans_features).last_hidden_state
+        features.update({'last_hidden_states': last_hidden_state})
+        features = self.mean_pooling(features)
+        
+        # sparse representation
+        logits = self.sparse_model(**trans_features, return_dict=True, output_hidden_states=True).logits 
+        features.update({"token_embeddings": logits})
+        features = self.max_pooling(features)
+
+        # covert dense to sparse 
+        sparse_from_dense = self.dense_to_sparse(features["mean_dense_embedding"])
+        features.update({"sparse_from_dense": sparse_from_dense})
+        return features
+
+    def get_word_embedding_dimension(self) -> int:
+            return self.auto_model.module.config.vocab_size
+        
+    def tokenize(self, texts: Union[List[str], List[Dict], List[Tuple[str, str]]]):
+        """
+        Tokenizes a text and maps tokens to token-ids
+        """
+        output = {}
+        if isinstance(texts[0], str):
+            to_tokenize = [texts]
+        elif isinstance(texts[0], dict):
+            to_tokenize = []
+            output['text_keys'] = []
+            for lookup in texts:
+                text_key, text = next(iter(lookup.items()))
+                to_tokenize.append(text)
+                output['text_keys'].append(text_key)
+            to_tokenize = [to_tokenize]
+        else:
+            batch1, batch2 = [], []
+            for text_tuple in texts:
+                batch1.append(text_tuple[0])
+                batch2.append(text_tuple[1])
+            to_tokenize = [batch1, batch2]
+
+        #strip
+        to_tokenize = [[str(s).strip() for s in col] for col in to_tokenize]
+
+        #Lowercase
+        if self.do_lower_case:
+            to_tokenize = [[s.lower() for s in col] for col in to_tokenize]
+
+        output.update(self.tokenizer(*to_tokenize, padding=True, truncation='longest_first', return_tensors="pt", max_length=self.max_seq_length))
+        return output
+
+    def get_config_dict(self):
+        return {key: self.__dict__[key] for key in self.config_keys}
+
+    def save(self, output_path: str):
+        # self.auto_model.module.save_pretrained(output_path)
+        # self.tokenizer.save_pretrained(output_path)
+        torch.save(self.dense_to_sparse.module.state_dict(), f"{output_path}/dense_to_sparse.pt")
+        with open(os.path.join(output_path, 'sentence_bert_config.json'), 'w') as fOut:
+            json.dump(self.get_config_dict(), fOut, indent=2)
+
+    @staticmethod
+    def load(input_path: str):
+        #Old classes used other config names than 'sentence_bert_config.json'
+        for config_name in ['sentence_bert_config.json', 'sentence_roberta_config.json', 'sentence_distilbert_config.json', 'sentence_camembert_config.json', 'sentence_albert_config.json', 'sentence_xlm-roberta_config.json', 'sentence_xlnet_config.json']:
+            sbert_config_path = os.path.join(input_path, config_name)
+            if os.path.exists(sbert_config_path):
+                break
+
+        with open(sbert_config_path) as fIn:
+            config = json.load(fIn)
+        return TransformationModel(model_name_or_path=input_path, **config)
