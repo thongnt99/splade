@@ -34,7 +34,6 @@ parser.add_argument("--dense_model_name", default="distilbert-base-uncased", typ
 parser.add_argument("--max_passages", default=0, type=int)
 parser.add_argument("--lambda_rank", default=0, type=float)
 parser.add_argument("--lambda_rec", default=1.0, type=float)
-parser.add_argument("--max_passages", default=0, type=int)
 parser.add_argument("--epochs", default=30, type=int)
 parser.add_argument("--negs_to_use", default=None, help="From which systems should negatives be used ? Multiple systems seperated by comma. None = all")
 parser.add_argument("--warmup_steps", default=1000, type=int)
