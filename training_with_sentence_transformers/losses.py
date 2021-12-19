@@ -46,7 +46,7 @@ class FLOPS:
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
 class TransformationLoss(nn.Module):
-    def __init__(self, model, similarity_fct = pairwise_dot_score):
+    def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_rank=1, lambda_rec=1):
         """
         :param model: SentenceTransformerModel
         :param similarity_fct:  Which similarity function to use
@@ -55,6 +55,8 @@ class TransformationLoss(nn.Module):
         self.model = model
         self.similarity_fct = similarity_fct
         self.loss_fct = nn.MSELoss()
+        self.lambda_rank = 1
+        self.lambda_rec = 1
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
         # sentence_features: query, positive passage, negative passage
@@ -79,7 +81,7 @@ class TransformationLoss(nn.Module):
         pos_mse =  self.loss_fct(sparse_from_dense_pos, sparse_pos) 
         neg_mse = self.loss_fct(sparse_from_dense_neg, sparse_neg) 
         print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse}")
-        return sparse_loss + (query_mse + pos_mse + neg_mse)/3
+        return self.lambda_rank*sparse_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse)
 
 class DenseLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score):
