@@ -772,6 +772,7 @@ class TransformationModel(nn.Module):
 
         # covert dense to sparse 
         sparse_from_dense = self.dense_to_sparse(features["mean_dense_embedding"])
+        sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense))
         features.update({"sparse_from_dense": sparse_from_dense})
         return features
 
