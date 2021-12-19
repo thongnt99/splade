@@ -58,7 +58,7 @@ logging.info("Create new SBERT model")
 word_embedding_model = models.TransformationModel(sparse_model_name, dense_model_name,  max_seq_length=max_seq_length)
 model = SentenceTransformer(modules=[word_embedding_model])
 
-model_save_path = f'output/transformation_{sparse_model_name.replace("/","-")}_{dense_model_name.replace("/","-")}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+model_save_path = f'output/transformation_{sparse_model_name.replace("/","-")}_{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_rec_{args.lambda_rec}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
 # Write self to path
 os.makedirs(model_save_path, exist_ok=True)
