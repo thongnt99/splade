@@ -55,8 +55,8 @@ class TransformationLoss(nn.Module):
         self.model = model
         self.similarity_fct = similarity_fct
         self.loss_fct = nn.MSELoss()
-        self.lambda_rank = 1
-        self.lambda_rec = 1
+        self.lambda_rank = lambda_rank
+        self.lambda_rec = lambda_rec
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
         # sentence_features: query, positive passage, negative passage
