@@ -753,7 +753,7 @@ class TransformationModel(nn.Module):
         self.max_seq_length = max_seq_length
 
     def __repr__(self):
-        return "StaticEmbedding ({}) with Transformer model: {} ".format(self.get_config_dict(), self.auto_model.__class__.__name__)
+        return "Transformation ({}) with Transformer model: {} {}".format(self.get_config_dict(), self.sparse_model.__class__.__name__, self.dense_model.__class__.__name__)
 
     def forward(self, features):
         """Returns token_embeddings, cls_token"""
