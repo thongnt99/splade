@@ -34,6 +34,7 @@ parser.add_argument("--dense_model_name", default="distilbert-base-uncased", typ
 parser.add_argument("--max_passages", default=0, type=int)
 parser.add_argument("--lambda_rank", default=0, type=float)
 parser.add_argument("--lambda_rec", default=1.0, type=float)
+parser.add_argument("--lambda_sparse", default=0.001, type=float)
 parser.add_argument("--epochs", default=30, type=int)
 parser.add_argument("--negs_to_use", default=None, help="From which systems should negatives be used ? Multiple systems seperated by comma. None = all")
 parser.add_argument("--warmup_steps", default=1000, type=int)
@@ -57,7 +58,7 @@ logging.info("Create new SBERT model")
 word_embedding_model = models.TransformationModel(sparse_model_name, dense_model_name,  max_seq_length=max_seq_length)
 model = SentenceTransformer(modules=[word_embedding_model])
 
-model_save_path = f'output/transformation_{sparse_model_name.replace("/","-")}_{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_rec_{args.lambda_rec}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+model_save_path = f'output/transformation_{sparse_model_name.replace("/","-")}-{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_rec_{args.lambda_rec}-lambda_sparse_{args.lambda_sparse}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
 # Write self to path
 os.makedirs(model_save_path, exist_ok=True)
@@ -207,7 +208,7 @@ class MSMARCODataset(Dataset):
 # For training the SentenceTransformer model, we need a dataset, a dataloader, and a loss used for training.
 train_dataset = MSMARCODataset(queries=train_queries, corpus=corpus, ce_scores=ce_scores)
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=train_batch_size, drop_last=True)
-train_loss = losses.TransformationLoss(model=model, lambda_rank=args.lambda_rank, lambda_rec=args.lambda_rec)
+train_loss = losses.TransformationLoss(model=model, lambda_rank=args.lambda_rank, lambda_rec=args.lambda_rec, lambda_sparse=args.lambda_sparse)
 
 # Train the model
 model.fit(train_objectives=[(train_dataloader, train_loss)],
