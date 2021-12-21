@@ -84,7 +84,7 @@ class TransformationLoss(nn.Module):
         neg_mse = self.loss_fct(sparse_from_dense_neg, sparse_neg) 
         # sparsity 
         sparsity = self.flops(sparse_from_dense_query) + self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg)
-        print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse} sparsity {sparsify}")
+        print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse} sparsity {sparsity}")
         return self.lambda_rank*sparse_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse) + self.lambda_sparse*sparsity
 
 class DenseLoss(nn.Module):
