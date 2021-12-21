@@ -705,8 +705,32 @@ class StaticEmbedding(nn.Module):
             config = json.load(fIn)
         return StaticEmbedding(model_name_or_path=input_path, **config)
 
+class Dense2Sparse(nn.Module):
+    def __init__(self, model_type="1-layer", out_dim):
+        super(Dense2Sparse, self).__init__()
+        self.model_type = model_type
+        if model_type == "1-layer":
+            self.transfer_model = nn.Sequential(
+                nn.Linear(768, out_dim)
+            )
+        elif model_type == "2-layer":
+            self.transfer_model = nn.Sequential(
+                nn.Linear(768, 768),
+                nn.LayerNorm(768),
+                nn.Linear(768, out_dim)
+            )
+        elif model_type == "mlm":
+            transformer = AutoModelForMaskedLM.from_pretrained("distilbert-base-uncased")
+            self.transfer_model = nn.Sequential(
+                transformer.vocab_transform,
+                transformer.vocab_layer_norm,
+                transformer.vocab_projector
+            )
+        else:
+            raise ValueError("model_type {} is not valid. Select: 1-layer, 2-layer, mlm".format(model_type))
 
-
+    def forward(self, batch_rep):
+        return self.transfer_model(batch_rep)
 
 class TransformationModel(nn.Module):
     """
@@ -718,11 +742,12 @@ class TransformationModel(nn.Module):
     :param max_seq_length: Truncate any inputs longer than max_seq_length
     :param model_args: Arguments (key, value pairs) passed to the Huggingface Transformers model
     :param cache_dir: Cache dir for Huggingface Transformers to store/load models
+    :param model_type: 1-layer, 2-layer, mlm head
     :param tokenizer_args: Arguments (key, value pairs) passed to the Huggingface Tokenizer model
     :param do_lower_case: If true, lowercases the input (independent if the model is cased or not)
     :param tokenizer_name_or_path: Name or path of the tokenizer. When None, then model_name_or_path is used
     """
-    def __init__(self, sparse_model_name_or_path: str, dense_model_name_or_path: str,  max_seq_length: Optional[int] = None,
+    def __init__(self, sparse_model_name_or_path: str, dense_model_name_or_path: str, model_type: str = "1-layer",  max_seq_length: Optional[int] = None,
                  model_args: Dict = {}, cache_dir: Optional[str] = None,
                  tokenizer_args: Dict = {}, do_lower_case: bool = False):
         super(TransformationModel, self).__init__()
@@ -747,9 +772,7 @@ class TransformationModel(nn.Module):
         self.dense_model = torch.nn.DataParallel(dense_model)
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
-
-        # linear transformation from dense to sparse
-        self.dense_to_sparse = torch.nn.DataParallel(torch.nn.Linear(768, self.get_word_embedding_dimension()))
+        self.dense_to_sparse = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
         self.max_seq_length = max_seq_length
 
     def __repr__(self):
