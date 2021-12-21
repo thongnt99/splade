@@ -32,6 +32,7 @@ parser.add_argument("--max_seq_length", default=256, type=int)
 parser.add_argument("--sparse_model_name", default="distilbert-base-uncased", type=str)
 parser.add_argument("--dense_model_name", default="distilbert-base-uncased", type=str)
 parser.add_argument("--max_passages", default=0, type=int)
+parser.add_argument("--transfer_type", type=str, default="1-layer")
 parser.add_argument("--lambda_rank", default=0, type=float)
 parser.add_argument("--lambda_rec", default=1.0, type=float)
 parser.add_argument("--lambda_sparse", default=0.001, type=float)
@@ -55,10 +56,10 @@ num_epochs = args.epochs  # Number of epochs we want to train
 
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.TransformationModel(sparse_model_name, dense_model_name,  max_seq_length=max_seq_length)
+word_embedding_model = models.TransformationModel(sparse_model_name, dense_model_name,  model_type=args.transfer_type, max_seq_length=max_seq_length)
 model = SentenceTransformer(modules=[word_embedding_model])
 
-model_save_path = f'output/transformation_{sparse_model_name.replace("/","-")}-{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_rec_{args.lambda_rec}-lambda_sparse_{args.lambda_sparse}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+model_save_path = f'output/transformation_{sparse_model_name.replace("/","-")}-{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_rec_{args.lambda_rec}-lambda_sparse_{args.lambda_sparse}-transfer_type_{args.transfer_type}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
 # Write self to path
 os.makedirs(model_save_path, exist_ok=True)
