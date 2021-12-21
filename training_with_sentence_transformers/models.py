@@ -725,6 +725,11 @@ class Dense2Sparse(nn.Module):
                 transformer.vocab_layer_norm,
                 transformer.vocab_projector
             )
+        elif model_type == "mlm-head":
+            transformer = AutoModelForMaskedLM.from_pretrained("distilbert-base-uncased")
+            self.transfer_model = nn.Sequential(
+                ransformer.vocab_projector
+            )
         else:
             raise ValueError("model_type {} is not valid. Select: 1-layer, 2-layer, mlm".format(model_type))
 
