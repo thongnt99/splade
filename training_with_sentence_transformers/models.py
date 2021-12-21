@@ -706,9 +706,8 @@ class StaticEmbedding(nn.Module):
         return StaticEmbedding(model_name_or_path=input_path, **config)
 
 class Dense2Sparse(nn.Module):
-    def __init__(self, model_type="1-layer", out_dim):
+    def __init__(self, model_type="1-layer", out_dim=30522):
         super(Dense2Sparse, self).__init__()
-        self.model_type = model_type
         if model_type == "1-layer":
             self.transfer_model = nn.Sequential(
                 nn.Linear(768, out_dim)
