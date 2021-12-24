@@ -45,6 +45,46 @@ class FLOPS:
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
+class Sparse2Dense(nn.Module):
+    def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_rank=1, lambda_rec=1):
+        """
+        :param model: SentenceTransformerModel
+        :param similarity_fct:  Which similarity function to use
+        """
+        super(Sparse2Dense, self).__init__()
+        self.model = model
+        self.similarity_fct = similarity_fct
+        self.loss_fct = nn.MSELoss()
+        self.lambda_rank = lambda_rank
+        self.lambda_rec = lambda_rec
+        self.flops = FLOPS()
+
+    def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
+        # sentence_features: query, positive passage, negative passage
+        reps = [self.model(sentence_feature) for sentence_feature in sentence_features]
+
+        dense_reps = [rep["mean_dense_embedding"] for rep in reps]
+        dense_query = dense_reps[0]
+        dense_pos = dense_reps[1]
+        dense_neg = dense_reps[2]
+
+        dense_from_sparse = [rep["dense_from_sparse"] for rep in reps]
+        dense_from_sparse_query = dense_from_sparse[0]
+        dense_from_sparse_pos = dense_from_sparse[1]
+        dense_from_sparse_neg = dense_from_sparse[2]
+
+        dense_scores_pos = self.similarity_fct(dense_from_sparse_query, dense_from_sparse_pos)
+        dense_scores_neg = self.similarity_fct(dense_from_sparse_query, dense_from_sparse_neg)
+        dense_margin_pred = dense_scores_pos - dense_scores_neg
+        dense_loss = self.loss_fct(dense_margin_pred, labels)        
+        # transformation loss 
+        query_mse = self.loss_fct(dense_from_sparse_query, dense_query)
+        pos_mse =  self.loss_fct(dense_from_sparse_pos, dense_pos) 
+        neg_mse = self.loss_fct(dense_from_sparse_neg, dense_neg) 
+        
+        print(f"sparse loss {dense_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse}")
+        return self.lambda_rank*dense_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse)
+
 class TransformationLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_rank=1, lambda_rec=1, lambda_sparse=0.001):
         """
@@ -86,7 +126,7 @@ class TransformationLoss(nn.Module):
         sparsity_query = self.flops(sparse_from_dense_query) 
         sparsity_doc = (self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg))/2
         sparsity = sparsity_query + sparsity_doc 
-        print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
+        print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse} sparsity_query {sparsity_query} sparsity_ {sparsity_doc}")
         return self.lambda_rank*sparse_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse) + self.lambda_sparse*sparsity
 
 class DenseLoss(nn.Module):
