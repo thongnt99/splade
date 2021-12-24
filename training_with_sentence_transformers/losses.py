@@ -97,7 +97,7 @@ class TransformationLoss(nn.Module):
         self.loss_fct = nn.MSELoss()
         self.lambda_rank = lambda_rank
         self.lambda_rec = lambda_rec
-        self.lambda_sparse = 0.001
+        self.lambda_sparse = lambda_sparse
         self.flops = FLOPS()
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
