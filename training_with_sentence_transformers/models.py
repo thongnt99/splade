@@ -753,11 +753,11 @@ class TransformationModel(nn.Module):
     """
     def __init__(self, sparse_model_name_or_path: str, dense_model_name_or_path: str, model_type: str = "1-layer",  max_seq_length: Optional[int] = None,
                  model_args: Dict = {}, cache_dir: Optional[str] = None,
-                 tokenizer_args: Dict = {}, do_lower_case: bool = False):
+                 tokenizer_args: Dict = {}, do_lower_case: bool = False, use_log: bool = False):
         super(TransformationModel, self).__init__()
         self.config_keys = ['max_seq_length', 'do_lower_case']
         self.do_lower_case = do_lower_case
-
+        self.use_log = use_log
         # sparse splade model
         sparse_config = AutoConfig.from_pretrained(sparse_model_name_or_path, **model_args, cache_dir=cache_dir)
         sparse_model = AutoModelForMaskedLM.from_pretrained(sparse_model_name_or_path, config=sparse_config, cache_dir=cache_dir)
@@ -799,7 +799,11 @@ class TransformationModel(nn.Module):
 
         # covert dense to sparse 
         sparse_from_dense = self.dense_to_sparse(features["mean_dense_embedding"])
-        sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense))
+        if self.use_log:
+            sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense))
+        else:
+            sparse_from_dense = torch.relu(sparse_from_dense)
+            
         features.update({"sparse_from_dense": sparse_from_dense})
         return features
 
