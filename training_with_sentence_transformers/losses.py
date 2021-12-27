@@ -82,7 +82,7 @@ class Sparse2Dense(nn.Module):
         pos_mse =  self.loss_fct(dense_from_sparse_pos, dense_pos) 
         neg_mse = self.loss_fct(dense_from_sparse_neg, dense_neg) 
         
-        print(f"sparse loss {dense_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse}")
+        print(f"dense loss {dense_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse}")
         return self.lambda_rank*dense_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse)
 
 class TransformationLoss(nn.Module):
@@ -113,11 +113,16 @@ class TransformationLoss(nn.Module):
         sparse_from_dense_query = sparse_from_dense[0]
         sparse_from_dense_pos = sparse_from_dense[1]
         sparse_from_dense_neg = sparse_from_dense[2]
-
-        sparse_scores_pos = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_pos)
-        sparse_scores_neg = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_neg)
+        # sparse margin 
+        sparse_scores_pos = self.similarity_fct(sparse_query, sparse_pos)
+        sparse_scores_neg = self.similarity_fct(sparse_query, sparse_neg)
         sparse_margin_pred = sparse_scores_pos - sparse_scores_neg
-        sparse_loss = self.loss_fct(sparse_margin_pred, labels)        
+        # appromiated sparse margin 
+        sparse_from_dense_scores_pos = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_pos)
+        sparse_from_dense_scores_neg = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_neg)
+        sparse_from_dense_margin_pred = sparse_from_dense_scores_pos - sparse_from_dense_scores_neg
+        ranking_loss = self.loss_fct(sparse_from_dense_margin_pred, sparse_margin_pred)  
+
         # transformation loss 
         query_mse = self.loss_fct(sparse_from_dense_query, sparse_query)
         pos_mse =  self.loss_fct(sparse_from_dense_pos, sparse_pos) 
@@ -126,8 +131,8 @@ class TransformationLoss(nn.Module):
         sparsity_query = self.flops(sparse_from_dense_query) 
         sparsity_doc = (self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg))/2
         sparsity = sparsity_query + sparsity_doc 
-        print(f"sparse loss {sparse_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse} sparsity_query {sparsity_query} sparsity_ {sparsity_doc}")
-        return self.lambda_rank*sparse_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse) + self.lambda_sparse*sparsity
+        print(f"ranking loss {ranking_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse} sparsity_query {sparsity_query} sparsity_ {sparsity_doc}")
+        return self.lambda_rank*ranking_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse) + self.lambda_sparse*sparsity
 
 class DenseLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score):
