@@ -85,13 +85,13 @@ class Sparse2Dense(nn.Module):
         print(f"dense loss {dense_loss} query MSE {query_mse} pos MSE {pos_mse} neg MSE {neg_mse}")
         return self.lambda_rank*dense_loss + self.lambda_rec*(query_mse + pos_mse + neg_mse)
 
-class TransformationLoss(nn.Module):
+class Dense2SparseLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_rank=1, lambda_rec=1, lambda_sparse=0.001):
         """
         :param model: SentenceTransformerModel
         :param similarity_fct:  Which similarity function to use
         """
-        super(TransformationLoss, self).__init__()
+        super(Dense2SparseLoss, self).__init__()
         self.model = model
         self.similarity_fct = similarity_fct
         self.loss_fct = nn.MSELoss()
