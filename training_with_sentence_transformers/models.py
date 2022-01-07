@@ -736,7 +736,7 @@ class Dense2Sparse(nn.Module):
     def forward(self, batch_rep):
         return self.transfer_model(batch_rep)
 
-class TransformationModel(nn.Module):
+class Dense2SparseModel(nn.Module):
     """
     Huggingface AutoModel to generate token embeddings.
     Loads the correct class, e.g. BERT / RoBERTa etc.
@@ -754,7 +754,7 @@ class TransformationModel(nn.Module):
     def __init__(self, sparse_model_name_or_path: str, dense_model_name_or_path: str, model_type: str = "1-layer",  max_seq_length: Optional[int] = None,
                  model_args: Dict = {}, cache_dir: Optional[str] = None,
                  tokenizer_args: Dict = {}, do_lower_case: bool = False, use_log: bool = False):
-        super(TransformationModel, self).__init__()
+        super(Dense2SparseModel, self).__init__()
         self.config_keys = ['max_seq_length', 'do_lower_case']
         self.do_lower_case = do_lower_case
         self.use_log = use_log
@@ -862,7 +862,7 @@ class TransformationModel(nn.Module):
 
         with open(sbert_config_path) as fIn:
             config = json.load(fIn)
-        return TransformationModel(model_name_or_path=input_path, **config)
+        return Dense2SparseModel(model_name_or_path=input_path, **config)
 
 class Sparse2Dense(nn.Module):
     """
