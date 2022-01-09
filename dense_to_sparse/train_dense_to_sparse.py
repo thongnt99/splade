@@ -56,10 +56,10 @@ num_epochs = args.epochs  # Number of epochs we want to train
 
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.Dense2SparseModel(sparse_model_name, model_type=args.transfer_type, max_seq_length=max_seq_length, use_log=args.use_log)
+word_embedding_model = models.Dense2SparseModel(dense_model_name, model_type=args.transfer_type, max_seq_length=max_seq_length, use_log=args.use_log)
 model = SentenceTransformer(modules=[word_embedding_model])
 
-model_save_path = f'output/dense_to_sparse_{sparse_model_name.replace("/","-")}-{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_sparse_doc_{args.lambda_d}-lambda_sparse_query{args.lambda_q}-transfer_type_{args.transfer_type}-use_log_{args.use_log}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+model_save_path = f'output/dense_to_sparse_{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_sparse_doc_{args.lambda_d}-lambda_sparse_query_{args.lambda_q}-transfer_type_{args.transfer_type}-use_log_{args.use_log}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
 # Write self to path
 os.makedirs(model_save_path, exist_ok=True)
