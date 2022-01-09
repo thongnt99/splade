@@ -29,10 +29,9 @@ logging.basicConfig(format='%(asctime)s - %(message)s',
 parser = argparse.ArgumentParser()
 parser.add_argument("--train_batch_size", default=64, type=int)
 parser.add_argument("--max_seq_length", default=256, type=int)
-parser.add_argument("--sparse_model_name", default="distilbert-base-uncased", type=str)
 parser.add_argument("--dense_model_name", default="distilbert-base-uncased", type=str)
 parser.add_argument("--max_passages", default=0, type=int)
-parser.add_argument("--transfer_type", type=str, default="1-layer")
+parser.add_argument("--transfer_type", type=str, default="mlm")
 parser.add_argument("--lambda_rank", default=0, type=float)
 parser.add_argument("--lambda_d", default=0.001, type=float)
 parser.add_argument("--lambda_q", default=0.01, type=float)
@@ -49,7 +48,6 @@ args = parser.parse_args()
 logging.info(str(args))
 
 train_batch_size = args.train_batch_size  # Increasing the train batch size generally improves the model performance, but requires more GPU memory
-sparse_model_name = args.sparse_model_name
 dense_model_name = args.dense_model_name
 max_passages = args.max_passages
 max_seq_length = args.max_seq_length  # Max length for passages. Increasing it implies more GPU memory needed
