@@ -99,7 +99,7 @@ class Dense2SparseLoss(nn.Module):
         # sparsity: just for tracking
         sparsity_query = self.flops(sparse_from_dense_query) 
         sparsity_doc = (self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg))/2
-        sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*expressionsparsity_doc
+        sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*sparsity_doc
 
         print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
         return self.lambda_rank*dense_marginmse + sparsity
