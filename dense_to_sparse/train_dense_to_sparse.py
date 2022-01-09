@@ -36,6 +36,7 @@ parser.add_argument("--lambda_rank", default=0, type=float)
 parser.add_argument("--lambda_d", default=0.001, type=float)
 parser.add_argument("--lambda_q", default=0.01, type=float)
 parser.add_argument("--epochs", default=30, type=int)
+parser.add_argument("--margin", default="dense", type=str, help="margin to learn from")
 parser.add_argument("--negs_to_use", default=None, help="From which systems should negatives be used ? Multiple systems seperated by comma. None = all")
 parser.add_argument("--warmup_steps", default=1000, type=int)
 parser.add_argument("--lr", default=2e-5, type=float)
@@ -209,7 +210,7 @@ class MSMARCODataset(Dataset):
 # For training the SentenceTransformer model, we need a dataset, a dataloader, and a loss used for training.
 train_dataset = MSMARCODataset(queries=train_queries, corpus=corpus, ce_scores=ce_scores)
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=train_batch_size, drop_last=True)
-train_loss = losses.Dense2SparseLoss(model=model, lambda_rank=args.lambda_rank, lambda_sparse_doc=args.lambda_d, lambda_sparse_query=args.lambda_q)
+train_loss = losses.Dense2SparseLoss(model=model, margin=args.margin, ambda_rank=args.lambda_rank, lambda_sparse_doc=args.lambda_d, lambda_sparse_query=args.lambda_q)
 
 # Train the model
 model.fit(train_objectives=[(train_dataloader, train_loss)],

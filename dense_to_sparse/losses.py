@@ -46,7 +46,7 @@ class FLOPS:
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
 class Dense2SparseLoss(nn.Module):
-    def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_rank=1, lambda_sparse_doc=0.001, lambda_sparse_query = 0.01):
+    def __init__(self, model, similarity_fct = pairwise_dot_score, margin="dense", lambda_rank=1, lambda_sparse_doc=0.001, lambda_sparse_query = 0.01):
         """
         :param model: a dense model to sparsify 
         :param similarity_fct:  Which similarity function to use
@@ -59,6 +59,7 @@ class Dense2SparseLoss(nn.Module):
         self.lambda_sparse_doc = lambda_sparse_doc
         self.lambda_sparse_query = lambda_sparse_query
         self.flops = FLOPS()
+        self.margin = margin
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
         # sentence_features: query, positive passage, negative passage
@@ -102,4 +103,7 @@ class Dense2SparseLoss(nn.Module):
         sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*sparsity_doc
 
         print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
-        return self.lambda_rank*dense_marginmse + sparsity
+        if self.margin == "dense":
+            return self.lambda_rank*dense_marginmse + sparsity
+        elif self.margin == "ce":
+            return self.lambda_rank*ce_marginmse + sparsity
