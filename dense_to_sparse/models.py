@@ -129,7 +129,7 @@ class Dense2SparseModel(nn.Module):
         elif features["type"] == "doc":
             sparse_from_dense = self.dense_to_sparse_doc(features["dense_embedding"])
 
-    
+
         # use relu and log to enforce some sparsity     
         if self.use_log:
             sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense))
@@ -180,7 +180,8 @@ class Dense2SparseModel(nn.Module):
     def save(self, output_path: str):
         # self.auto_model.module.save_pretrained(output_path)
         # self.tokenizer.save_pretrained(output_path)
-        torch.save(self.dense_to_sparse.module.state_dict(), f"{output_path}/dense_to_sparse.pt")
+        torch.save(self.dense_to_sparse_doc.module.state_dict(), f"{output_path}/dense_to_sparse_doc.pt")
+        torch.save(self.dense_to_sparse_query.module.state_dict(), f"{output_path}/dense_to_sparse_query.pt")
         with open(os.path.join(output_path, 'sentence_bert_config.json'), 'w') as fOut:
             json.dump(self.get_config_dict(), fOut, indent=2)
 
