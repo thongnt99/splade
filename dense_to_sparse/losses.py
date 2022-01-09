@@ -56,7 +56,8 @@ class Dense2SparseLoss(nn.Module):
         self.similarity_fct = similarity_fct
         self.loss_fct = nn.MSELoss()
         self.lambda_rank = lambda_rank
-        self.lambda_sparse = lambda_sparse
+        self.lambda_sparse_doc = lambda_sparse_doc
+        self.lambda_sparse_query = lambda_sparse_query
         self.flops = FLOPS()
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
@@ -88,12 +89,17 @@ class Dense2SparseLoss(nn.Module):
         sparse_from_dense_scores_pos = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_pos)
         sparse_from_dense_scores_neg = self.similarity_fct(sparse_from_dense_query, sparse_from_dense_neg)
         sparse_from_dense_margin_pred = sparse_from_dense_scores_pos - sparse_from_dense_scores_neg
-        ranking_loss = self.loss_fct(sparse_from_dense_margin_pred, dense_margin_pred)  
+        
+        # dense_marginmse
+        dense_marginmse = self.loss_fct(sparse_from_dense_margin_pred, dense_margin_pred)  
+        
+        # ce_marginmse
+        ce_marginmse = self.loss_fct(sparse_from_dense_margin_pred, labels)
 
-        # sparsity 
+        # sparsity: just for tracking
         sparsity_query = self.flops(sparse_from_dense_query) 
         sparsity_doc = (self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg))/2
-        sparsity = lambda_sparse_query*sparsity_query + lambda_sparse_doc*expressionsparsity_doc
+        sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*expressionsparsity_doc
 
-        print(f"ranking loss {ranking_loss} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
-        return self.lambda_rank*ranking_loss + sparsity
+        print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
+        return self.lambda_rank*dense_marginmse + sparsity
