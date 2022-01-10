@@ -210,7 +210,7 @@ class MSMARCODataset(Dataset):
 # For training the SentenceTransformer model, we need a dataset, a dataloader, and a loss used for training.
 train_dataset = MSMARCODataset(queries=train_queries, corpus=corpus, ce_scores=ce_scores)
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=train_batch_size, drop_last=True)
-train_loss = losses.Dense2SparseLoss(model=model, margin=args.margin, ambda_rank=args.lambda_rank, lambda_sparse_doc=args.lambda_d, lambda_sparse_query=args.lambda_q)
+train_loss = losses.Dense2SparseLoss(model=model, margin=args.margin, lambda_rank=args.lambda_rank, lambda_sparse_doc=args.lambda_d, lambda_sparse_query=args.lambda_q)
 
 # Train the model
 model.fit(train_objectives=[(train_dataloader, train_loss)],
