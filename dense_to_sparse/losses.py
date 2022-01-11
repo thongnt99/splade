@@ -41,10 +41,21 @@ class FLOPS:
     """constraint from Minimizing FLOPs to Learn Efficient Sparse Representations
     https://arxiv.org/abs/2004.05665
     """
+    def __init__(self, reg_type = "l2"):
+        '''
+        reg_type: L1 regularizer or L2 regularizer 
+        '''
+        super(FLOPS, self).__init__()
+        self.reg_type = reg_type
 
     def __call__(self, batch_rep):
-        return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
-
+        if self.reg_type == "l2":
+            return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
+        elif self.reg_type == "l1":
+            return torch.sum(torch.mean(torch.abs(batch_rep), dim=0))
+        else:
+            pass 
+        
 class Dense2SparseLoss(nn.Module):
     def __init__(self, model, similarity_fct = pairwise_dot_score, margin="dense", lambda_rank=1, lambda_sparse_doc=0.001, lambda_sparse_query = 0.01):
         """
