@@ -57,7 +57,7 @@ class FLOPS:
             pass 
         
 class Dense2SparseLoss(nn.Module):
-    def __init__(self, model, similarity_fct = pairwise_dot_score, margin="dense", lambda_rank=1, lambda_sparse_doc=0.001, lambda_sparse_query = 0.01):
+    def __init__(self, model, similarity_fct = pairwise_dot_score, margin="dense", lambda_rank=1, lambda_sparse_doc=0.001, lambda_sparse_query = 0.01, reg_type="l2"):
         """
         :param model: a dense model to sparsify 
         :param similarity_fct:  Which similarity function to use
@@ -69,7 +69,7 @@ class Dense2SparseLoss(nn.Module):
         self.lambda_rank = lambda_rank
         self.lambda_sparse_doc = lambda_sparse_doc
         self.lambda_sparse_query = lambda_sparse_query
-        self.flops = FLOPS()
+        self.flops = FLOPS(reg_type)
         self.margin = margin
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
