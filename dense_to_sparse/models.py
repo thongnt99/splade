@@ -109,11 +109,11 @@ class Dense2SparseModel(nn.Module):
         self.dense_to_sparse_query = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
         self.dense_to_sparse_doc = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
         if model_type == "mlm":
-            for param in self.dense_to_sparse_doc.module[-1].parameters():
+            for param in self.dense_to_sparse_doc.module.transfer_model[-1].parameters():
                 param.requires_grad = False 
-            for param in self.dense_to_sparse_query.module[-1].parameters():
+            for param in self.dense_to_sparse_query.module.transfer_model[-1].parameters():
                 param.requires_grad = False 
-                
+
         self.max_seq_length = max_seq_length
 
     def __repr__(self):
