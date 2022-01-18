@@ -145,7 +145,7 @@ class Dense2SparseModel(nn.Module):
             sparse_from_dense = torch.relu(sparse_from_dense)
         # only select top k tokens
         kthvalues = sparse_from_dense.kthvalue(self.get_word_embedding_dimension()-top_k, 1, True).values
-        sparse_from_dense = torch.relu(sparse_from_dense - kthvalues) 
+        sparse_from_dense[sparse_from_dense <= kthvalues] = 0
         features.update({"sparse_from_dense": sparse_from_dense})
         return features
 
