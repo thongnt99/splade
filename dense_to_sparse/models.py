@@ -113,8 +113,8 @@ class Dense2SparseModel(nn.Module):
                 param.requires_grad = False 
             for param in self.dense_to_sparse_query.module.transfer_model[-1].parameters():
                 param.requires_grad = False 
-
         self.max_seq_length = max_seq_length
+        # 
 
     def __repr__(self):
         return "Dense2Sparse ({}) with Transformer model: {}".format(self.get_config_dict(), self.dense_model.__class__.__name__)
@@ -131,10 +131,10 @@ class Dense2SparseModel(nn.Module):
         
         # covert dense to sparse 
         if features["type"] == "query":
-            top_k = 100
+            top_k = 500
             sparse_from_dense = self.dense_to_sparse_query(features["dense_embedding"])
         elif features["type"] == "doc":
-            top_k = 500
+            top_k = 1000
             sparse_from_dense = self.dense_to_sparse_doc(features["dense_embedding"])
 
 
