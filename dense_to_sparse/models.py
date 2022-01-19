@@ -131,10 +131,10 @@ class Dense2SparseModel(nn.Module):
         
         # covert dense to sparse 
         if features["type"] == "query":
-            top_k = 500
+            top_k = -1
             sparse_from_dense = self.dense_to_sparse_query(features["dense_embedding"])
         elif features["type"] == "doc":
-            top_k = 1000
+            top_k = -1
             sparse_from_dense = self.dense_to_sparse_doc(features["dense_embedding"])
 
 
@@ -144,8 +144,9 @@ class Dense2SparseModel(nn.Module):
         else:
             sparse_from_dense = torch.relu(sparse_from_dense)
         # only select top k tokens
-        kthvalues = sparse_from_dense.kthvalue(self.get_word_embedding_dimension()-top_k, 1, True).values
-        sparse_from_dense[sparse_from_dense <= kthvalues] = 0
+        if top_k > 0:
+            kthvalues = sparse_from_dense.kthvalue(self.get_word_embedding_dimension()-top_k, 1, True).values
+            sparse_from_dense[sparse_from_dense <= kthvalues] = 0
         features.update({"sparse_from_dense": sparse_from_dense})
         return features
 
