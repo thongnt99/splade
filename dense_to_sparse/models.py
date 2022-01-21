@@ -207,3 +207,119 @@ class Dense2SparseModel(nn.Module):
         with open(sbert_config_path) as fIn:
             config = json.load(fIn)
         return Dense2SparseModel(model_name_or_path=input_path, **config)
+
+class DenseTerm2SparseModel(nn.Module):
+    """
+    Huggingface AutoModel to generate token embeddings.
+    Loads the correct class, e.g. BERT / RoBERTa etc.
+
+    :param dense_model_name_or_path: Huggingface models name (https://huggingface.co/models)
+    :param max_seq_length: Truncate any inputs longer than max_seq_length
+    :param model_args: Arguments (key, value pairs) passed to the Huggingface Transformers model
+    :param cache_dir: Cache dir for Huggingface Transformers to store/load models
+    :param model_type: 1-layer, 2-layer, mlm head
+    :param tokenizer_args: Arguments (key, value pairs) passed to the Huggingface Tokenizer model
+    :param do_lower_case: If true, lowercases the input (independent if the model is cased or not)
+    :param tokenizer_name_or_path: Name or path of the tokenizer. When None, then model_name_or_path is used
+    """
+    def __init__(self, dense_model_name_or_path: str, model_type: str = "1-layer", max_seq_length: Optional[int] = None,
+                 model_args: Dict = {}, cache_dir: Optional[str] = None,
+                 tokenizer_args: Dict = {}, do_lower_case: bool = False, use_log: bool = False):
+        super(DenseTerm2SparseModel, self).__init__()
+        self.config_keys = ['max_seq_length', 'do_lower_case']
+        self.do_lower_case = do_lower_case
+        self.use_log = use_log
+
+        # dense model
+        dense_config = AutoConfig.from_pretrained(dense_model_name_or_path, **model_args, cache_dir=cache_dir)
+        dense_model = AutoModel.from_pretrained(dense_model_name_or_path, config=dense_config, cache_dir=cache_dir)
+        for param in dense_model.parameters():
+            param.requires_grad = False
+        self.dense_model = torch.nn.DataParallel(dense_model)
+        self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
+        self.max_seq_length = max_seq_length
+        self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
+        distilbert = AutoModelForMaskedLM.from_pretrained("distilbert-base-uncased")
+        transfer_model = nn.Sequential(
+            distilbert.vocab_transform,
+            distilbert.vocab_layer_norm,
+            distilbert.vocab_projector
+        )
+        self.transfer_model = torch.nn.DataParallel(transfer_model)
+        # 
+
+    def __repr__(self):
+        return "DenseTerm2Sparse ({}) with Transformer model: {}".format(self.get_config_dict(), self.dense_model.__class__.__name__)
+
+    def forward(self, features):
+        """Returns token_embeddings, cls_token"""
+        trans_features = {'input_ids': features['input_ids'], 'attention_mask': features['attention_mask']}
+        if 'token_type_ids' in features:
+            trans_features['token_type_ids'] = features['token_type_ids']
+        # dense representation 
+        last_hidden_state = self.dense_model(**trans_features).last_hidden_state
+        features.update({'last_hidden_states': last_hidden_state})
+        features = self.mean_pooling(features)
+        logits = self.transfer_model(last_hidden_state)       
+        logits = torch.log(1 + torch.relu(logits))*features["attention_mask"].unsqueeze(-1)
+        sparse_rep = logits.max(dim=1)
+        features.update({"sparse_from_dense": sparse_from_dense})
+        return features
+
+    def get_word_embedding_dimension(self) -> int:
+            return self.dense_model.module.config.vocab_size
+        
+    def tokenize(self, texts: Union[List[str], List[Dict], List[Tuple[str, str]]]):
+        """
+        Tokenizes a text and maps tokens to token-ids
+        """
+        output = {}
+        if isinstance(texts[0], str):
+            to_tokenize = [texts]
+        elif isinstance(texts[0], dict):
+            to_tokenize = []
+            output['text_keys'] = []
+            for lookup in texts:
+                text_key, text = next(iter(lookup.items()))
+                to_tokenize.append(text)
+                output['text_keys'].append(text_key)
+            to_tokenize = [to_tokenize]
+        else:
+            batch1, batch2 = [], []
+            for text_tuple in texts:
+                batch1.append(text_tuple[0])
+                batch2.append(text_tuple[1])
+            to_tokenize = [batch1, batch2]
+
+        #strip
+        to_tokenize = [[str(s).strip() for s in col] for col in to_tokenize]
+
+        #Lowercase
+        if self.do_lower_case:
+            to_tokenize = [[s.lower() for s in col] for col in to_tokenize]
+
+        output.update(self.dense_tokenizer(*to_tokenize, padding=True, truncation='longest_first', return_tensors="pt", max_length=self.max_seq_length))
+        return output
+
+    def get_config_dict(self):
+        return {key: self.__dict__[key] for key in self.config_keys}
+
+    def save(self, output_path: str):
+        # self.auto_model.module.save_pretrained(output_path)
+        # self.tokenizer.save_pretrained(output_path)
+        torch.save(self.dense_to_sparse_doc.module.state_dict(), f"{output_path}/dense_to_sparse_doc.pt")
+        torch.save(self.dense_to_sparse_query.module.state_dict(), f"{output_path}/dense_to_sparse_query.pt")
+        with open(os.path.join(output_path, 'sentence_bert_config.json'), 'w') as fOut:
+            json.dump(self.get_config_dict(), fOut, indent=2)
+
+    @staticmethod
+    def load(input_path: str):
+        #Old classes used other config names than 'sentence_bert_config.json'
+        for config_name in ['sentence_bert_config.json', 'sentence_roberta_config.json', 'sentence_distilbert_config.json', 'sentence_camembert_config.json', 'sentence_albert_config.json', 'sentence_xlm-roberta_config.json', 'sentence_xlnet_config.json']:
+            sbert_config_path = os.path.join(input_path, config_name)
+            if os.path.exists(sbert_config_path):
+                break
+
+        with open(sbert_config_path) as fIn:
+            config = json.load(fIn)
+        return Dense2SparseModel(model_name_or_path=input_path, **config)
