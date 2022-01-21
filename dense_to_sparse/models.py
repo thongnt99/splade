@@ -239,12 +239,7 @@ class DenseTerm2SparseModel(nn.Module):
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.max_seq_length = max_seq_length
         self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
-        distilbert = AutoModelForMaskedLM.from_pretrained("distilbert-base-uncased")
-        transfer_model = nn.Sequential(
-            distilbert.vocab_transform,
-            distilbert.vocab_layer_norm,
-            distilbert.vocab_projector
-        )
+        transfer_model = Dense2Sparse("mlm")
         self.transfer_model = torch.nn.DataParallel(transfer_model)
         # 
 
