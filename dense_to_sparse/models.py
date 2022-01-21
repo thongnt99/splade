@@ -263,7 +263,7 @@ class DenseTerm2SparseModel(nn.Module):
         logits = self.transfer_model(last_hidden_state)       
         logits = torch.log(1 + torch.relu(logits))*features["attention_mask"].unsqueeze(-1)
         sparse_rep = logits.max(dim=1)
-        features.update({"sparse_from_dense": sparse_from_dense})
+        features.update({"sparse_from_dense": sparse_rep})
         return features
 
     def get_word_embedding_dimension(self) -> int:
