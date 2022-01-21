@@ -307,8 +307,7 @@ class DenseTerm2SparseModel(nn.Module):
     def save(self, output_path: str):
         # self.auto_model.module.save_pretrained(output_path)
         # self.tokenizer.save_pretrained(output_path)
-        torch.save(self.dense_to_sparse_doc.module.state_dict(), f"{output_path}/dense_to_sparse_doc.pt")
-        torch.save(self.dense_to_sparse_query.module.state_dict(), f"{output_path}/dense_to_sparse_query.pt")
+        torch.save(self.transfer_model.module.state_dict(), f"{output_path}/transfer_model.pt")
         with open(os.path.join(output_path, 'sentence_bert_config.json'), 'w') as fOut:
             json.dump(self.get_config_dict(), fOut, indent=2)
 
@@ -322,4 +321,4 @@ class DenseTerm2SparseModel(nn.Module):
 
         with open(sbert_config_path) as fIn:
             config = json.load(fIn)
-        return Dense2SparseModel(model_name_or_path=input_path, **config)
+        return DenseTerm2SparseModel(model_name_or_path=input_path, **config)
