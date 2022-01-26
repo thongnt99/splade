@@ -102,7 +102,7 @@ class Dense2Sparse(nn.Module):
         sample = gumbel_softmax(probs, temp)[:,:,1]
         # print("Sample size: ", sample.size())
         sparse =  self.transfer_model(batch_rep)
-        return sparse*sample, active_prob
+        return sparse*sample, sample
 
 class Dense2SparseModel(nn.Module):
     """
