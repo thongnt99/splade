@@ -97,7 +97,7 @@ class Dense2Sparse(nn.Module):
     def forward(self, batch_rep, temp):
         active_prob = F.sigmoid(self.gate(batch_rep))
         probs = torch.cat([1-active_prob, active_prob], dim=1)
-        sample = gumbel_softmax(probs, temp)
+        sample = gumbel_softmax(probs, temp)[:,:,1]
         sparse =  self.transfer_model(batch_rep)
         return sparse*sample, active_prob
 
