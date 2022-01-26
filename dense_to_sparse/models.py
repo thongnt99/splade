@@ -97,7 +97,7 @@ class Dense2Sparse(nn.Module):
     def forward(self, batch_rep, temp):
         active_prob = F.sigmoid(self.gate(batch_rep))
         print("Active prob size: ", active_prob.size())
-        probs = torch.cat([1-active_prob, active_prob], dim=1)
+        probs = torch.stack([1-active_prob, active_prob], dim=2)
         print("Active probs size: ", probs.size())
         sample = gumbel_softmax(probs, temp)
         print("Sample size: ", sample.size())
