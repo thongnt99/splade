@@ -55,7 +55,7 @@ def gumbel_softmax_sample(probs, temp):
     return F.softmax(y/temp, dim=-1)
 
 def gumbel_softmax(probs, temp):
-    y = gumbel_softmax_sample(probs, temperature)
+    y = gumbel_softmax_sample(probs, temp)
     shape = y.size()
     _, ind = y.max(dim=-1)
     y_hard = torch.zeros_like(y).view(-1, shape[-1])
