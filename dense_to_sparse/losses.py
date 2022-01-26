@@ -69,7 +69,9 @@ class Dense2SparseLoss(nn.Module):
         self.lambda_rank = lambda_rank
         self.lambda_sparse_doc = lambda_sparse_doc
         self.lambda_sparse_query = lambda_sparse_query
-        self.flops = FLOPS(reg_type)
+        self.reg_type = reg_type
+        if self.reg_type == "l2":
+            self.flops = FLOPS(reg_type)
         self.margin = margin
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
@@ -109,9 +111,17 @@ class Dense2SparseLoss(nn.Module):
         ce_marginmse = self.loss_fct(sparse_from_dense_margin_pred, labels)
 
         # sparsity: just for tracking
-        sparsity_query = self.flops(sparse_from_dense_query) 
-        sparsity_doc = (self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg))/2
-        sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*sparsity_doc
+        if self.reg_type == "l2":
+            sparsity_query = self.flops(sparse_from_dense_query) 
+            sparsity_doc = (self.flops(sparse_from_dense_pos) + self.flops(sparse_from_dense_neg))/2
+            sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*sparsity_doc
+        elif self.reg_type == "l0":
+            active_probs = [rep["active_prob"] for rep in reps]
+            sparsity_query = active_probs[0].mean(dim=1).sum()
+            sparsity_doc = (active_probs[1].mean(dim=1).sum() + active_probs[2].mean(dim=1).sum())/2
+            sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*sparsity_doc
+        else:
+            pass
 
         print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
         if self.margin == "dense":

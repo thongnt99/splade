@@ -7,6 +7,7 @@ import json
 from typing import List, Dict, Optional, Union, Tuple
 import os
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 
 class MeanPooling(nn.Module):
@@ -45,9 +46,29 @@ class MeanPooling(nn.Module):
             config = json.load(fIn)
         return MeanPooling(**config) 
 
+def sample_gumbel(shape, eps=1e-20):
+    U = torch.rand(shape).cuda()
+    return -torch.autograd.Variable(torch.log(-torch.log(U + eps) + eps))
+
+def gumbel_softmax_sample(probs, temp):
+    y = torch.log(probs) + sample_gumbel(probs.size())
+    return F.softmax(y/temp, dim=-1)
+
+def gumbel_softmax(probs, temp):
+    y = gumbel_softmax_sample(probs, temperature)
+    shape = y.size()
+    _, ind = y.max(dim=-1)
+    y_hard = torch.zeros_like(y).view(-1, shape[-1])
+    y_hard.scatter_(1, ind.view(-1, 1), 1)
+    y_hard = y_hard.view(*shape)
+    return (y_hard - y).detach() + y
+
+
 class Dense2Sparse(nn.Module):
     def __init__(self, model_type="1-layer", out_dim=30522):
         super(Dense2Sparse, self).__init__()
+        # this learn the probability of selecting each tokens
+        self.gate = nn.Linear(768, out_dim)
         if model_type == "1-layer":
             self.transfer_model = nn.Sequential(
                 nn.Linear(768, out_dim)
@@ -73,8 +94,12 @@ class Dense2Sparse(nn.Module):
         else:
             raise ValueError("model_type {} is not valid. Select: 1-layer, 2-layer, mlm".format(model_type))
 
-    def forward(self, batch_rep):
-        return self.transfer_model(batch_rep)
+    def forward(self, batch_rep, temp):
+        active_prob = F.sigmoid(self.gate(batch_rep))
+        probs = torch.cat([1-active_prob, active_prob], dim=1)
+        sample = gumbel_softmax(probs, temp)
+        sparse =  self.transfer_model(batch_rep)
+        return sparse*sample, active_prob
 
 class Dense2SparseModel(nn.Module):
     """
@@ -108,12 +133,13 @@ class Dense2SparseModel(nn.Module):
         self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
         self.dense_to_sparse_query = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
         self.dense_to_sparse_doc = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
-        if model_type == "mlm":
-            for param in self.dense_to_sparse_doc.module.transfer_model[-1].parameters():
-                param.requires_grad = False 
-            for param in self.dense_to_sparse_query.module.transfer_model[-1].parameters():
-                param.requires_grad = False 
+        # if model_type == "mlm":
+        #     for param in self.dense_to_sparse_doc.module.transfer_model[-1].parameters():
+        #         param.requires_grad = False 
+        #     for param in self.dense_to_sparse_query.module.transfer_model[-1].parameters():
+        #         param.requires_grad = False 
         self.max_seq_length = max_seq_length
+        self.temp = 1.0
         # 
 
     def __repr__(self):
@@ -132,12 +158,11 @@ class Dense2SparseModel(nn.Module):
         # covert dense to sparse 
         if features["type"] == "query":
             top_k = -1
-            sparse_from_dense = self.dense_to_sparse_query(features["dense_embedding"])
+            sparse_from_dense, active_prob = self.dense_to_sparse_query(features["dense_embedding"], self.temp)
         elif features["type"] == "doc":
             top_k = -1
-            sparse_from_dense = self.dense_to_sparse_doc(features["dense_embedding"])
-
-
+            sparse_from_dense, active_prob = self.dense_to_sparse_doc(features["dense_embedding"], self.temp)
+        
         # use relu and log to enforce some sparsity     
         if self.use_log:
             sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense))
@@ -147,7 +172,7 @@ class Dense2SparseModel(nn.Module):
         if top_k > 0:
             kthvalues = sparse_from_dense.kthvalue(self.get_word_embedding_dimension()-top_k, 1, True).values
             sparse_from_dense[sparse_from_dense <= kthvalues] = 0
-        features.update({"sparse_from_dense": sparse_from_dense})
+        features.update({"sparse_from_dense": sparse_from_dense, "active_prob": active_prob})
         return features
 
     def get_word_embedding_dimension(self) -> int:
