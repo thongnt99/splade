@@ -118,7 +118,7 @@ class Dense2SparseLoss(nn.Module):
         elif self.reg_type == "l0":
             active_probs = [rep["active_prob"] for rep in reps]
             sparsity_query = torch.sum(active_probs[0].mean(dim=0)**2)
-            sparsity_doc = (torch.sum(active_probs[1].mean(dim=0)**2) + orch.sum(active_probs[2].mean(dim=0)**2))/2
+            sparsity_doc = (torch.sum(active_probs[1].mean(dim=0)**2) + torch.sum(active_probs[2].mean(dim=0)**2))/2
             sparsity = self.lambda_sparse_query*sparsity_query + self.lambda_sparse_doc*sparsity_doc
         else:
             pass
