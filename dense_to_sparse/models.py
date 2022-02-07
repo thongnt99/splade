@@ -95,11 +95,13 @@ class Dense2Sparse(nn.Module):
             raise ValueError("model_type {} is not valid. Select: 1-layer, 2-layer, mlm".format(model_type))
 
     def forward(self, batch_rep, temp):
-        active_prob = F.sigmoid(self.gate(batch_rep))
+        # active_prob = F.sigmoid(self.gate(batch_rep))
+        fire_logits = self.gate(batch_rep)
         # print("Active prob size: ", active_prob.size())
         probs = torch.stack([1-active_prob, active_prob], dim=2)
         # print("Active probs size: ", probs.size())
-        sample = gumbel_softmax(probs, temp)[:,:,1]
+        # sample = gumbel_softmax(probs, temp)[:,:,1]
+        samples = F.gumbel_softmax(fire_logits, tau=temp, hard=False)
         # print("Sample size: ", sample.size())
         sparse =  self.transfer_model(batch_rep)
         return sparse*sample, sample
