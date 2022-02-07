@@ -131,6 +131,7 @@ class Dense2SparseModel(nn.Module):
         dense_model = AutoModel.from_pretrained(dense_model_name_or_path, config=dense_config, cache_dir=cache_dir)
         for param in dense_model.parameters():
             param.requires_grad = False
+        self.sparsity_bias = torch.nn.Parameter(torch.Tensor([0.0]), requires_grad=True)
         self.dense_model = torch.nn.DataParallel(dense_model)
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
@@ -168,9 +169,9 @@ class Dense2SparseModel(nn.Module):
         
         # use relu and log to enforce some sparsity     
         if self.use_log:
-            sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense))
+            sparse_from_dense = torch.log(1 + torch.relu(sparse_from_dense + self.sparsity_bias))
         else:
-            sparse_from_dense = torch.relu(sparse_from_dense)
+            sparse_from_dense = torch.relu(sparse_from_dense + self.sparsity_bias)
         # only select top k tokens
         if top_k > 0:
             kthvalues = sparse_from_dense.kthvalue(self.get_word_embedding_dimension()-top_k, 1, True).values
