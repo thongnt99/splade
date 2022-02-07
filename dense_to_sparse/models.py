@@ -103,7 +103,7 @@ class Dense2Sparse(nn.Module):
         probs = torch.stack([gate_0_logits, gate_1_logits], dim=2)
         # print("Active probs size: ", probs.size())
         # sample = gumbel_softmax(probs, temp)[:,:,1]
-        samples = F.gumbel_softmax(probs, tau=temp, hard=False)
+        samples = F.gumbel_softmax(probs, tau=temp, hard=False)[:,:, 1]
         # print("Sample size: ", sample.size())
         sparse =  self.transfer_model(batch_rep)
         return sparse*samples, samples
