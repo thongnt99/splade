@@ -96,7 +96,7 @@ class Dense2Sparse(nn.Module):
 
     def forward(self, batch_rep, temp):
         # active_prob = F.sigmoid(self.gate(batch_rep))
-        gate_1_prob = F.sigmoid(self.gate_0(batch_rep))
+        gate_1_prob = F.sigmoid(self.gate(batch_rep))
         gate_0_prob = 1 - gate_0_logits
         # print("Active prob size: ", active_prob.size())
         probs = torch.stack([gate_0_prob, gate_1_prob], dim=2)
