@@ -68,7 +68,8 @@ class Dense2Sparse(nn.Module):
     def __init__(self, model_type="1-layer", out_dim=30522):
         super(Dense2Sparse, self).__init__()
         # this learn the probability of selecting each tokens
-        self.gate = nn.Linear(768, out_dim)
+        self.gate_0 = nn.Linear(768, out_dim)
+        self.gate_1 = nn.Linear(768, out_dim)
         if model_type == "1-layer":
             self.transfer_model = nn.Sequential(
                 nn.Linear(768, out_dim)
@@ -96,12 +97,13 @@ class Dense2Sparse(nn.Module):
 
     def forward(self, batch_rep, temp):
         # active_prob = F.sigmoid(self.gate(batch_rep))
-        fire_logits = self.gate(batch_rep)
+        gate_0_logits = self.gate_0(batch_rep)
+        gate_1_logits = self.gate_1(batch_rep)
         # print("Active prob size: ", active_prob.size())
-        probs = torch.stack([1-active_prob, active_prob], dim=2)
+        probs = torch.stack([gate_0_logits, gate_1_logits], dim=2)
         # print("Active probs size: ", probs.size())
         # sample = gumbel_softmax(probs, temp)[:,:,1]
-        samples = F.gumbel_softmax(fire_logits, tau=temp, hard=False)
+        samples = F.gumbel_softmax(probs, tau=temp, hard=False)
         # print("Sample size: ", sample.size())
         sparse =  self.transfer_model(batch_rep)
         return sparse*sample, sample
