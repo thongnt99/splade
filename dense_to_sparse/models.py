@@ -182,7 +182,7 @@ class Dense2SparseModel(nn.Module):
         features.update({"sparse_from_dense": sparse_from_dense, "active_prob": active_prob})
         log_obj = {"temp": self.temp, "activation_threshold": self.sparsity_bias.item()}
         print(json.dumps(log_obj))
-        self.temp = max(self.temp - 1e-4, 1e-5) 
+        self.temp = max(self.temp - 1e-5, 1e-5) 
         return features
 
     def get_word_embedding_dimension(self) -> int:
