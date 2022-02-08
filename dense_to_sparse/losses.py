@@ -2,6 +2,7 @@
 #Original License APACHE2
 
 import torch
+import json
 from torch import nn, Tensor
 from typing import Iterable, Dict
 
@@ -129,7 +130,7 @@ class Dense2SparseLoss(nn.Module):
             "sparsity_query": sparsity_query.item(),
             "sparsity_doc": sparsity_doc.item()            
         }
-        print(log_obj)
+        print(json.dumps(log_obj))
         # print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
         if self.margin == "dense":
             return self.lambda_rank*dense_marginmse + sparsity
