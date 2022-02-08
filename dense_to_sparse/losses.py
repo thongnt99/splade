@@ -123,7 +123,14 @@ class Dense2SparseLoss(nn.Module):
         else:
             pass
 
-        print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
+        log_obj = {
+            "margin_mse (ce)": ce_marginmse,
+            "margin_mse (dense)": dense_marginmse, 
+            "sparsity_query": sparsity_query,
+            "sparsity_doc": sparsity_doc            
+        }
+        print(log_obj)
+        # print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
         if self.margin == "dense":
             return self.lambda_rank*dense_marginmse + sparsity
         elif self.margin == "ce":
