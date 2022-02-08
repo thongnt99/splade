@@ -226,7 +226,7 @@ class Dense2SparseModel(nn.Module):
         # self.tokenizer.save_pretrained(output_path)
         torch.save(self.dense_to_sparse_doc.module.state_dict(), f"{output_path}/dense_to_sparse_doc.pt")
         torch.save(self.dense_to_sparse_query.module.state_dict(), f"{output_path}/dense_to_sparse_query.pt")
-        torch.save(self.sparsity_bias, f"{output_path"/sparsity_bias.pt")
+        torch.save(self.sparsity_bias, f"{output_path}/sparsity_bias.pt")
         with open(os.path.join(output_path, 'sentence_bert_config.json'), 'w') as fOut:
             json.dump(self.get_config_dict(), fOut, indent=2)
 
