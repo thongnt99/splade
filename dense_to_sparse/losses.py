@@ -124,10 +124,10 @@ class Dense2SparseLoss(nn.Module):
             pass
 
         log_obj = {
-            "margin_mse (ce)": ce_marginmse,
-            "margin_mse (dense)": dense_marginmse, 
-            "sparsity_query": sparsity_query,
-            "sparsity_doc": sparsity_doc            
+            "margin_mse (ce)": ce_marginmse.item(),
+            "margin_mse (dense)": dense_marginmse.item(), 
+            "sparsity_query": sparsity_query.item(),
+            "sparsity_doc": sparsity_doc.item()            
         }
         print(log_obj)
         # print(f"margin_mse (ce) {ce_marginmse} margin_mse (dense) {dense_marginmse} sparsity_query {sparsity_query} sparsity_doc {sparsity_doc}")
