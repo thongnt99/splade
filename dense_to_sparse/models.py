@@ -180,7 +180,7 @@ class Dense2SparseModel(nn.Module):
             kthvalues = sparse_from_dense.kthvalue(self.get_word_embedding_dimension()-top_k, 1, True).values
             sparse_from_dense[sparse_from_dense <= kthvalues] = 0
         features.update({"sparse_from_dense": sparse_from_dense, "active_prob": active_prob})
-        self.temp = max(self.temp - 1e-8, 1e-5) 
+        self.temp = max(self.temp - 1e-4, 1e-5) 
         return features
 
     def get_word_embedding_dimension(self) -> int:
