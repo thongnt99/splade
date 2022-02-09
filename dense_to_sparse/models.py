@@ -123,7 +123,7 @@ class Dense2SparseModel(nn.Module):
     """
     def __init__(self, dense_model_name_or_path: str, model_type: str = "1-layer", max_seq_length: Optional[int] = None,
                  model_args: Dict = {}, cache_dir: Optional[str] = None,
-                 tokenizer_args: Dict = {}, do_lower_case: bool = False, use_log: bool = False):
+                 tokenizer_args: Dict = {}, do_lower_case: bool = False, use_log: bool = False, pretrained=None, temp=1.0):
         super(Dense2SparseModel, self).__init__()
         self.config_keys = ['max_seq_length', 'do_lower_case']
         self.do_lower_case = do_lower_case
@@ -146,7 +146,11 @@ class Dense2SparseModel(nn.Module):
         #     for param in self.dense_to_sparse_query.module.transfer_model[-1].parameters():
         #         param.requires_grad = False 
         self.max_seq_length = max_seq_length
-        self.temp = 1.0
+        self.temp = temp
+        if pretrained != None:
+            self.dense_to_sparse_query.load_state_dict(torch.load(pretrained+"/dense_to_sparse_query.pt"))
+            self.dense_to_sparse_doc.load_state_dict(torch.load(pretrained+"/dense_to_sparse_doc.pt"))
+            self.sparsity_bias = torch.load(pretrained+"/sparsity_bias.pt")
         # 
 
     def __repr__(self):

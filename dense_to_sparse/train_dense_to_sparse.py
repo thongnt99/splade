@@ -39,6 +39,8 @@ parser.add_argument("--epochs", default=30, type=int)
 parser.add_argument("--margin", default="dense", type=str, help="margin to learn from")
 parser.add_argument("--negs_to_use", default=None, help="From which systems should negatives be used ? Multiple systems seperated by comma. None = all")
 parser.add_argument("--warmup_steps", default=1000, type=int)
+parser.add_argument("--pretrained", default=None, type=str, help="pretrained from which the model is initialized")
+parser.add_argument("--temp", default=0.2, type=float, help="temperature for gumbel softmax")
 parser.add_argument("--lr", default=2e-5, type=float)
 parser.add_argument("--num_negs_per_system", default=5, type=int)
 parser.add_argument("--use_all_queries", default=False, action="store_true")
@@ -58,7 +60,7 @@ num_epochs = args.epochs  # Number of epochs we want to train
 
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.Dense2SparseModel(dense_model_name, model_type=args.transfer_type, max_seq_length=max_seq_length, use_log=args.use_log)
+word_embedding_model = models.Dense2SparseModel(dense_model_name, model_type=args.transfer_type, max_seq_length=max_seq_length, use_log=args.use_log, pretrained=args.pretrained, temp=args.temp)
 model = SentenceTransformer(modules=[word_embedding_model])
 
 model_save_path = f'output/dense_to_sparse_{dense_model_name.replace("/","-")}-lambda_rank_{args.lambda_rank}-lambda_sparse_doc_{args.lambda_d}-lambda_sparse_query_{args.lambda_q}-transfer_type_{args.transfer_type}-use_log_{args.use_log}-reg_type_{args.reg}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
