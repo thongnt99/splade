@@ -138,8 +138,8 @@ class Dense2SparseModel(nn.Module):
         self.dense_model = torch.nn.DataParallel(dense_model)
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.mean_pooling = torch.nn.DataParallel(MeanPooling(768)) 
-        self.dense_to_sparse_query = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
-        self.dense_to_sparse_doc = torch.nn.DataParallel(Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension()))
+        self.dense_to_sparse_query = Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension())
+        self.dense_to_sparse_doc = Dense2Sparse(model_type=model_type, out_dim=self.get_word_embedding_dimension())
         # if model_type == "mlm":
         #     for param in self.dense_to_sparse_doc.module.transfer_model[-1].parameters():
         #         param.requires_grad = False 
@@ -151,7 +151,8 @@ class Dense2SparseModel(nn.Module):
             self.dense_to_sparse_query.load_state_dict(torch.load(pretrained+"/dense_to_sparse_query.pt"))
             self.dense_to_sparse_doc.load_state_dict(torch.load(pretrained+"/dense_to_sparse_doc.pt"))
             self.sparsity_bias = torch.load(pretrained+"/sparsity_bias.pt")
-        # 
+        self.dense_to_sparse_query = torch.nn.DataParallel(self.dense_to_sparse_query)
+        self.dense_to_sparse_doc = torch.nn.DataParallel(self.dense_to_sparse_doc)
 
     def __repr__(self):
         return "Dense2Sparse ({}) with Transformer model: {}".format(self.get_config_dict(), self.dense_model.__class__.__name__)
