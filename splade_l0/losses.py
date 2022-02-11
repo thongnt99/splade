@@ -42,7 +42,6 @@ class FLOPS:
     """constraint from Minimizing FLOPs to Learn Efficient Sparse Representations
     https://arxiv.org/abs/2004.05665
     """
-
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
@@ -80,9 +79,9 @@ class MarginMSELossSplade(nn.Module):
         flops_query = self.lambda_q*(self.FLOPS(embeddings_query)) 
         sparse_loss = self.loss_fct(margin_pred, labels)
         log_obj = {
-            "loss": sparse_loss,
-            "flops_doc": flops_doc,
-            "flops_query": flops_query
+            "loss": sparse_loss.item(),
+            "flops_doc": flops_doc.item(),
+            "flops_query": flops_query.item()
         }
         print(json.dumps(log_obj))
         return sparse_loss + flops_doc + flops_query
