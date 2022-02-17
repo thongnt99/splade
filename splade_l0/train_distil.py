@@ -39,6 +39,7 @@ parser.add_argument("--lambda_q", default=0.01, type=float)
 parser.add_argument("--lr", default=2e-5, type=float)
 parser.add_argument("--num_negs_per_system", default=5, type=int)
 parser.add_argument("--use_all_queries", default=False, action="store_true")
+parser.add_argument("--freeze_vocab", default=False, action="store_true", help="Freeze the vocabulary projection layer to make output's Zipfian distribution")
 args = parser.parse_args()
 
 logging.info(str(args))
@@ -52,10 +53,10 @@ num_epochs = args.epochs  # Number of epochs we want to train
 
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.MLMTransformer(model_name, max_seq_length=max_seq_length)
+word_embedding_model = models.MLMTransformer(model_name, max_seq_length=max_seq_length, freeze_vocab=args.freeze_vocab)
 model = SentenceTransformer(modules=[word_embedding_model])
 
-model_save_path = f'output/distilSplade_l0_{args.lambda_q}_{args.lambda_d}_{model_name.replace("/", "-")}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+model_save_path = f'output/distilSplade_l0_{args.lambda_q}_{args.lambda_d}_{model_name.replace("/", "-")}-batch_size_{train_batch_size}-freeze_vovab_{args.freeze_vocab}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
 # Write self to path
 os.makedirs(model_save_path, exist_ok=True)
