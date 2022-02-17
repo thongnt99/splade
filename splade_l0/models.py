@@ -84,6 +84,45 @@ class Splade_Pooling(nn.Module):
 
         return Splade_Pooling(**config)
 
+class AttnPooling(nn.Module):
+    def __init__(self, word_embedding_dimension: int):
+        super(AttnPooling, self).__init__()
+        self.word_embedding_dimension = word_embedding_dimension
+        self.config_keys = ["word_embedding_dimension"]
+
+    def __repr__(self):
+        return "Pooling Splade({})"
+
+    def get_pooling_mode_str(self) -> str:
+        return "Splade"
+
+    def forward(self, features: Dict[str, Tensor]):
+        token_embeddings = features['token_embeddings']
+        attention_mask = features['attention_mask']
+
+        ## Pooling strategy
+        output_vectors = []
+        sentence_embedding = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1).values
+        features.update({'sentence_embedding': sentence_embedding})
+        return features
+
+    def get_sentence_embedding_dimension(self):
+        return self.word_embedding_dimension
+
+    def get_config_dict(self):
+        return {key: self.__dict__[key] for key in self.config_keys}
+
+    def save(self, output_path):
+        with open(os.path.join(output_path, 'config.json'), 'w') as fOut:
+            json.dump(self.get_config_dict(), fOut, indent=2)
+
+    @staticmethod
+    def load(input_path):
+        with open(os.path.join(input_path, 'config.json')) as fIn:
+            config = json.load(fIn)
+
+        return Splade_Pooling(**config)
+
 class MLMTransformer(nn.Module):
     """Huggingface AutoModel to generate token embeddings.
     Loads the correct class, e.g. BERT / RoBERTa etc.
@@ -99,13 +138,18 @@ class MLMTransformer(nn.Module):
     def __init__(self, model_name_or_path: str, max_seq_length: Optional[int] = None,
                  model_args: Dict = {}, cache_dir: Optional[str] = None,
                  tokenizer_args: Dict = {}, do_lower_case: bool = False,
-                 tokenizer_name_or_path : str = None, scratch: bool = False):
+                 tokenizer_name_or_path : str = None, scratch: bool = False, freeze_vocab = False):
         super(MLMTransformer, self).__init__()
         self.config_keys = ['max_seq_length', 'do_lower_case']
         self.do_lower_case = do_lower_case
 
         config = AutoConfig.from_pretrained(model_name_or_path, **model_args, cache_dir=cache_dir)
         model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
+        if freeze_vocab is True:
+            # freeze the vocabulary projecion layer to ensure the zipfian distribution of the output 
+            for param in model.vocab_projector.parameters():
+                param.requires_grad = False 
+                
         self.auto_model = torch.nn.DataParallel(model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
