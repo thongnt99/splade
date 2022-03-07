@@ -44,6 +44,12 @@ class FLOPS:
     """
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
+    
+# class NonSymLoss:
+#     """
+#     """
+#     def __call__(self, batch_query, batch_doc):
+#         pass 
 
 class MarginMSELossSplade(nn.Module):
     """
@@ -66,18 +72,25 @@ class MarginMSELossSplade(nn.Module):
 
     def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
         # sentence_features: query, positive passage, negative passage
-        reps = [self.model(sentence_feature)['sentence_embedding'] for sentence_feature in sentence_features]
-        embeddings_query = reps[0]
-        embeddings_pos = reps[1]
-        embeddings_neg = reps[2]
-
+        features = [self.model(sentence_feature) for sentence_feature in sentence_features]
+        reps = [f['sentence_embedding'] for f in features]
+        sels = [f['max_selection'] for f in features]
+        
+        sel_query = sels[0]
+        embeddings_query = reps[0]*sel_query
+        sel_pos = sels[1]
+        embeddings_pos = reps[1]*sel_pos
+        sel_neg = sels[2]
+        embeddings_neg = reps[2]*sel_neg
+        
         scores_pos = self.similarity_fct(embeddings_query, embeddings_pos)
         scores_neg = self.similarity_fct(embeddings_query, embeddings_neg)
         margin_pred = scores_pos - scores_neg
 
-        flops_doc = self.lambda_d*(self.FLOPS(embeddings_pos) + self.FLOPS(embeddings_neg))
-        flops_query = self.lambda_q*(self.FLOPS(embeddings_query)) 
+        flops_doc = self.lambda_d*(self.FLOPS(sel_pos) + self.FLOPS(sel_neg))
+        flops_query = self.lambda_q*(self.FLOPS(sel_query)) 
         sparse_loss = self.loss_fct(margin_pred, labels)
+
         log_obj = {
             "loss": sparse_loss.item(),
             "flops_doc": flops_doc.item(),
