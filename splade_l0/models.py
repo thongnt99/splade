@@ -99,12 +99,13 @@ class AttnPooling(nn.Module):
     def forward(self, features: Dict[str, Tensor]):
         token_embeddings = features['token_embeddings']
         attention_mask = features['attention_mask']
-
+        selection_matrix = features['selection_matrix']
         ## Pooling strategy
         output_vectors = []
-        sentence_embedding = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1).values
+        sentence_embedding, max_idx = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1)
+        selection_vector = selection_matrix.gather(dim=1, index=max_idx)
         # sentence_embedding = torch.max(nn.functional.softmax(token_embeddings) * attention_mask.unsqueeze(-1), dim=1).values
-        features.update({'sentence_embedding': sentence_embedding})
+        features.update({'sentence_embedding': sentence_embedding, "max_selection": selection_vector})
         return features
 
     def get_sentence_embedding_dimension(self):
@@ -146,6 +147,7 @@ class MLMTransformer(nn.Module):
 
         config = AutoConfig.from_pretrained(model_name_or_path, **model_args, cache_dir=cache_dir)
         model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
+        binary_selector = nn.Linear(768, 30522)
         if freeze_vocab is True:
             # freeze the vocabulary projecion layer to ensure the zipfian distribution of the output 
             for param in model.vocab_projector.parameters():
@@ -154,6 +156,8 @@ class MLMTransformer(nn.Module):
         self.auto_model = torch.nn.DataParallel(model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
+        self.binary_selector = torch.nn.DataParallel(binary_selector)
+        self.sigmoid = nn.Sigmoid()
         # No max_seq_length set. Try to infer from model
         if max_seq_length is None:
             if hasattr(self.auto_model, "config") and hasattr(self.auto_model.config, "max_position_embeddings") and hasattr(self.tokenizer, "model_max_length"):
@@ -172,9 +176,11 @@ class MLMTransformer(nn.Module):
         if 'token_type_ids' in features:
             trans_features['token_type_ids'] = features['token_type_ids']
 
-        output_states = self.auto_model(**trans_features, return_dict=False)
-        output_tokens = output_states[0]
-        features.update({'token_embeddings': output_tokens, 'attention_mask': features['attention_mask']})
+        output_states = self.auto_model(**trans_features, return_dict=True, output_hidden_states=True)
+        output_tokens = output_states.logits
+        last_hidden_states = output_states.hidden_states[-1]
+        selection_matrix = self.sigmoid(self.binary_selector(last_hidden_states))
+        features.update({'token_embeddings': output_tokens, 'attention_mask': features['attention_mask'], "selection_matrix": selection_matrix})
         features = self.pooling(features)
         return features
 
