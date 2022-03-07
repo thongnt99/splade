@@ -2,6 +2,7 @@
 #Original License APACHE2
 
 from torch import nn
+import torch.nn.functional as F
 from transformers import AutoModel, AutoModelForMaskedLM, AutoTokenizer, AutoConfig
 import json
 from typing import List, Dict, Optional, Union, Tuple
@@ -45,10 +46,28 @@ class MeanPooling(nn.Module):
             config = json.load(fIn)
         return MeanPooling(**config) 
 
+class STEFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input):
+        return (input > 0).float()
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return F.hardtanh(grad_output)
+
+class StraightThroughEstimator(nn.Module):
+    def __init__(self):
+        super(StraightThroughEstimator, self).__init__()
+
+    def forward(self, x):
+        x = STEFunction.apply(x)
+        return x
+
 class Splade_Pooling(nn.Module):
     def __init__(self, word_embedding_dimension: int):
         super(Splade_Pooling, self).__init__()
         self.word_embedding_dimension = word_embedding_dimension
+        self.ste = StraightThroughEstimator()
         self.config_keys = ["word_embedding_dimension"]
 
     def __repr__(self):
@@ -60,16 +79,10 @@ class Splade_Pooling(nn.Module):
     def forward(self, features: Dict[str, Tensor]):
         token_embeddings = features['token_embeddings']
         attention_mask = features['attention_mask']
-        selection_matrix = features['selection_matrix']
-
         ## Pooling strategy
-        sentence_embedding, max_idx = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1, keepdim=True)
-        selection_prob = selection_matrix.gather(dim=1, index=max_idx)
-        # straight-throught estimator 
-        selection_vector = (selection_prob >= 0.5).float()
-        selection_vector = selection_prob + (selection_vector - selection_prob).detach()
-        # sentence_embedding = torch.max(nn.functional.softmax(token_embeddings) * attention_mask.unsqueeze(-1), dim=1).values
-        features.update({'sentence_embedding': sentence_embedding, "max_selection": selection_vector})
+        sentence_embedding, _ = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1, keepdim=True)
+        l_0 = self.ste(sentence_embedding)
+        features.update({'sentence_embedding': sentence_embedding, "l_0": l_0})
         return features
 
     def get_sentence_embedding_dimension(self):
@@ -111,7 +124,6 @@ class MLMTransformer(nn.Module):
 
         config = AutoConfig.from_pretrained(model_name_or_path, **model_args, cache_dir=cache_dir)
         model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
-        binary_selector = nn.Linear(768, 30522)
         if freeze_vocab is True:
             # freeze the vocabulary projecion layer to ensure the zipfian distribution of the output 
             for param in model.vocab_projector.parameters():
@@ -120,8 +132,6 @@ class MLMTransformer(nn.Module):
         self.auto_model = torch.nn.DataParallel(model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
-        self.binary_selector = torch.nn.DataParallel(binary_selector)
-        self.sigmoid = nn.Sigmoid()
         # No max_seq_length set. Try to infer from model
         if max_seq_length is None:
             if hasattr(self.auto_model, "config") and hasattr(self.auto_model.config, "max_position_embeddings") and hasattr(self.tokenizer, "model_max_length"):
@@ -142,9 +152,7 @@ class MLMTransformer(nn.Module):
 
         output_states = self.auto_model(**trans_features, return_dict=True, output_hidden_states=True)
         output_tokens = output_states.logits
-        last_hidden_states = output_states.hidden_states[-1]
-        selection_matrix = self.sigmoid(self.binary_selector(last_hidden_states))
-        features.update({'token_embeddings': output_tokens, 'attention_mask': features['attention_mask'], "selection_matrix": selection_matrix})
+        features.update({'token_embeddings': output_tokens, 'attention_mask': features['attention_mask']})
         features = self.pooling(features)
         return features
 
