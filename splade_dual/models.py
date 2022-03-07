@@ -146,26 +146,25 @@ class MLMTransformer(nn.Module):
         config = AutoConfig.from_pretrained(model_name_or_path, **model_args, cache_dir=cache_dir)
         query_model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
         doc_model = AutoModelForMaskedLM.from_pretrained(model_name_or_path, config=config, cache_dir=cache_dir)
-        if freeze_vocab is True:
-            # freeze the vocabulary projecion layer to ensure the zipfian distribution of the output 
-            for param in model.vocab_projector.parameters():
-                param.requires_grad = False 
-                
+        # if freeze_vocab is True:
+        #     # freeze the vocabulary projecion layer to ensure the zipfian distribution of the output 
+        #     for param in model.vocab_projector.parameters():
+        #         param.requires_grad = False      
         self.query_model = torch.nn.DataParallel(query_model)
         self.doc_model = torch.nn.DataParallel(doc_model)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path if tokenizer_name_or_path is not None else model_name_or_path, cache_dir=cache_dir, **tokenizer_args)
         self.pooling = torch.nn.DataParallel(Splade_Pooling(self.get_word_embedding_dimension())) 
         # No max_seq_length set. Try to infer from model
         if max_seq_length is None:
-            if hasattr(self.auto_model, "config") and hasattr(self.auto_model.config, "max_position_embeddings") and hasattr(self.tokenizer, "model_max_length"):
-                max_seq_length = min(self.auto_model.config.max_position_embeddings, self.tokenizer.model_max_length)
+            if hasattr(self.query_model, "config") and hasattr(self.query_model.config, "max_position_embeddings") and hasattr(self.tokenizer, "model_max_length"):
+                max_seq_length = min(self.query_model.config.max_position_embeddings, self.tokenizer.model_max_length)
 
         self.max_seq_length = max_seq_length
         if tokenizer_name_or_path is not None:
-            self.auto_model.config.tokenizer_class = self.tokenizer.__class__.__name__
+            self.query_model.config.tokenizer_class = self.tokenizer.__class__.__name__
 
     def __repr__(self):
-        return "MLMTransformer({}) with Transformer model: {} ".format(self.get_config_dict(), self.auto_model.__class__.__name__)
+        return "MLMTransformer({}) with Transformer model: {} ".format(self.get_config_dict(), self.query_model.__class__.__name__)
 
     def forward(self, features):
         """Returns token_embeddings, cls_token"""
@@ -183,7 +182,7 @@ class MLMTransformer(nn.Module):
         return features
 
     def get_word_embedding_dimension(self) -> int:
-            return self.auto_model.module.config.vocab_size
+            return self.query_model.module.config.vocab_size
         
     def tokenize(self, texts: Union[List[str], List[Dict], List[Tuple[str, str]]]):
         """
@@ -221,7 +220,8 @@ class MLMTransformer(nn.Module):
         return {key: self.__dict__[key] for key in self.config_keys}
 
     def save(self, output_path: str):
-        self.auto_model.module.save_pretrained(output_path)
+        self.query_model.module.save_pretrained(os.path.join(output_path, 'query_model'))
+        self.doc_model.module.save_pretrained(os.path.join(output_path, 'doc_model'))
         self.tokenizer.save_pretrained(output_path)
 
         with open(os.path.join(output_path, 'sentence_bert_config.json'), 'w') as fOut:
