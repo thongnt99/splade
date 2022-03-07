@@ -5,6 +5,7 @@ import torch
 from torch import nn, Tensor
 from typing import Iterable, Dict
 import json
+import torch.nn.functional as F
 
 def pairwise_dot_score(a: Tensor, b: Tensor):
     """
@@ -74,21 +75,21 @@ class MarginMSELossSplade(nn.Module):
         # sentence_features: query, positive passage, negative passage
         features = [self.model(sentence_feature) for sentence_feature in sentence_features]
         reps = [f['sentence_embedding'] for f in features]
-        sels = [f['max_selection'] for f in features]
+        sels = [f['l_0'] for f in features]
         
-        sel_query = sels[0]
-        embeddings_query = reps[0]*sel_query
-        sel_pos = sels[1]
-        embeddings_pos = reps[1]*sel_pos
-        sel_neg = sels[2]
-        embeddings_neg = reps[2]*sel_neg
-        
+        embeddings_query = reps[0]
+        l0_query = sels[0]
+        embeddings_pos = reps[1]
+        l0_pos = sels[1]
+        embeddings_neg = reps[2]
+        l0_neg = sels[2]
+
         scores_pos = self.similarity_fct(embeddings_query, embeddings_pos)
         scores_neg = self.similarity_fct(embeddings_query, embeddings_neg)
         margin_pred = scores_pos - scores_neg
 
-        flops_doc = self.lambda_d*(self.FLOPS(sel_pos) + self.FLOPS(sel_neg))
-        flops_query = self.lambda_q*(self.FLOPS(sel_query)) 
+        flops_doc = self.lambda_d*(self.FLOPS(l0_pos) + self.FLOPS(l0_neg))
+        flops_query = self.lambda_q*(self.FLOPS(l0_query)) 
         sparse_loss = self.loss_fct(margin_pred, labels)
 
         log_obj = {
