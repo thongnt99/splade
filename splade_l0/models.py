@@ -106,7 +106,7 @@ class AttnPooling(nn.Module):
         
         selection_prob = selection_matrix.gather(dim=1, index=max_idx)
         # straight-throught estimator 
-        selection_vector = selection_prob >= 0.5
+        selection_vector = (selection_prob >= 0.5).float()
         selection_vector = selection_prob + (selection_vector - selection_prob).detach()
         # sentence_embedding = torch.max(nn.functional.softmax(token_embeddings) * attention_mask.unsqueeze(-1), dim=1).values
         features.update({'sentence_embedding': sentence_embedding, "max_selection": selection_vector})
