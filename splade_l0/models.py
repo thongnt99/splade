@@ -60,50 +60,10 @@ class Splade_Pooling(nn.Module):
     def forward(self, features: Dict[str, Tensor]):
         token_embeddings = features['token_embeddings']
         attention_mask = features['attention_mask']
-
-        ## Pooling strategy
-        output_vectors = []
-        sentence_embedding = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1).values
-        features.update({'sentence_embedding': sentence_embedding})
-        return features
-
-    def get_sentence_embedding_dimension(self):
-        return self.word_embedding_dimension
-
-    def get_config_dict(self):
-        return {key: self.__dict__[key] for key in self.config_keys}
-
-    def save(self, output_path):
-        with open(os.path.join(output_path, 'config.json'), 'w') as fOut:
-            json.dump(self.get_config_dict(), fOut, indent=2)
-
-    @staticmethod
-    def load(input_path):
-        with open(os.path.join(input_path, 'config.json')) as fIn:
-            config = json.load(fIn)
-
-        return Splade_Pooling(**config)
-
-class AttnPooling(nn.Module):
-    def __init__(self, word_embedding_dimension: int):
-        super(AttnPooling, self).__init__()
-        self.word_embedding_dimension = word_embedding_dimension
-        self.config_keys = ["word_embedding_dimension"]
-
-    def __repr__(self):
-        return "Pooling Splade({})"
-
-    def get_pooling_mode_str(self) -> str:
-        return "Splade"
-
-    def forward(self, features: Dict[str, Tensor]):
-        token_embeddings = features['token_embeddings']
-        attention_mask = features['attention_mask']
         selection_matrix = features['selection_matrix']
+
         ## Pooling strategy
-        output_vectors = []
         sentence_embedding, max_idx = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1)
-        
         selection_prob = selection_matrix.gather(dim=1, index=max_idx)
         # straight-throught estimator 
         selection_vector = (selection_prob >= 0.5).float()
