@@ -63,7 +63,7 @@ class Splade_Pooling(nn.Module):
         selection_matrix = features['selection_matrix']
 
         ## Pooling strategy
-        sentence_embedding, max_idx = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1)
+        sentence_embedding, max_idx = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1, keepdim=True)
         selection_prob = selection_matrix.gather(dim=1, index=max_idx)
         # straight-throught estimator 
         selection_vector = (selection_prob >= 0.5).float()
