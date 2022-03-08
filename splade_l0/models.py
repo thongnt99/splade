@@ -86,7 +86,7 @@ class Splade_Pooling(nn.Module):
         ## Pooling strategy
         sentence_embedding, _ = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1, keepdim=True)
         # l_0 = self.ste(sentence_embedding)
-        l_0 = torch.nn.Sigmoid(sentence_embedding)
+        l_0 = torch.nn.functional.sigmoid(sentence_embedding)
         features.update({'sentence_embedding': sentence_embedding, "l_0": l_0})
         return features
 
