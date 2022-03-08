@@ -54,7 +54,7 @@ class STEFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        input = ctx.saved_tensors
+        input = ctx.saved_tensors[0]
         grad_output = grad_output*input                
         grad_output[input >=1] = 0 
         grad_output[input <=0] = 0
