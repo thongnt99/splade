@@ -71,7 +71,7 @@ class Splade_Pooling(nn.Module):
     def __init__(self, word_embedding_dimension: int):
         super(Splade_Pooling, self).__init__()
         self.word_embedding_dimension = word_embedding_dimension
-        self.ste = StraightThroughEstimator()
+        # self.ste = StraightThroughEstimator()
         self.config_keys = ["word_embedding_dimension"]
 
     def __repr__(self):
@@ -85,7 +85,8 @@ class Splade_Pooling(nn.Module):
         attention_mask = features['attention_mask']
         ## Pooling strategy
         sentence_embedding, _ = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1, keepdim=True)
-        l_0 = self.ste(sentence_embedding)
+        # l_0 = self.ste(sentence_embedding)
+        l_0 = torch.nn.sigmoid(sentence_embedding)
         features.update({'sentence_embedding': sentence_embedding, "l_0": l_0})
         return features
 
