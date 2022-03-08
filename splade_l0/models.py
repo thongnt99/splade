@@ -49,11 +49,16 @@ class MeanPooling(nn.Module):
 class STEFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input):
+        ctx.save_for_backward(input)
         return (input > 0).float()
 
     @staticmethod
     def backward(ctx, grad_output):
-        return F.hardtanh(grad_output)
+        input = ctx.saved_tensors
+        grad_output = grad_output*input                
+        grad_output[input >=1] = 0 
+        grad_output[input <=0] = 0
+        return grad_output
 
 class StraightThroughEstimator(nn.Module):
     def __init__(self):
