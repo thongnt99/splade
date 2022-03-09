@@ -49,11 +49,11 @@ class FLOPS:
 class NewFlops:
     """
     """
-# class NonSymLoss:
-#     """
-#     """
-#     def __call__(self, batch_query, batch_doc):
-#         pass 
+class NonSymLoss:
+    """
+    """
+    def __call__(self, batch_query, batch_pos, batch_neg):
+        pass 
 
 class MarginMSELossSplade(nn.Module):
     """
@@ -91,8 +91,8 @@ class MarginMSELossSplade(nn.Module):
         scores_neg = self.similarity_fct(embeddings_query, embeddings_neg)
         margin_pred = scores_pos - scores_neg
 
-        flops_doc = self.lambda_d*(self.FLOPS(l0_pos) + self.FLOPS(l0_neg))
-        flops_query = self.lambda_q*(self.FLOPS(l0_query)) 
+        flops_doc = self.lambda_d*(self.FLOPS(embeddings_pos) + self.FLOPS(embeddings_neg))
+        flops_query = self.lambda_q*(self.FLOPS(embeddings_query)) 
         sparse_loss = self.loss_fct(margin_pred, labels)
 
         log_obj = {
