@@ -45,7 +45,10 @@ class FLOPS:
     """
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
-    
+
+class NewFlops:
+    """
+    """
 # class NonSymLoss:
 #     """
 #     """
