@@ -82,7 +82,8 @@ class NonSymLoss:
 
         log_obj = {
             "loss": sparse_loss.item(),
-            "flops": flops.item(),                        
+            "flops": flops.item(), 
+            "weighted_flops": self.lambda_reg*flops.item(),                       
         }
         print(json.dumps(log_obj))
         return sparse_loss + self.lambda_reg*flops
