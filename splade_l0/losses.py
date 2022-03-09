@@ -82,10 +82,10 @@ class NonSymLoss:
 
         log_obj = {
             "loss": sparse_loss.item(),
-            "flops": flops.item(),            
+            "flops": flops.item(),                        
         }
         print(json.dumps(log_obj))
-        return sparse_loss + flops
+        return sparse_loss + self.lambda_reg*flops
                                                                                                                                                                                                                                                                         
 class MarginMSELossSplade(nn.Module):
     """
