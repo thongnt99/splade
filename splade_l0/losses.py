@@ -46,7 +46,7 @@ class FLOPS:
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
-class NonSymLoss:    
+class NonSymLoss(nn.Module):    
     """
     """
     def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_reg=1e-3):
