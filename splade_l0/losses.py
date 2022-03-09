@@ -46,14 +46,11 @@ class FLOPS:
     def __call__(self, batch_rep):
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
-class NewFlops:
-    """
-    """
-class NonSymLoss:
-    """
-    """
+class NonSymLoss:    
     def __call__(self, batch_query, batch_pos, batch_neg):
-        pass 
+        batch_doc = torch.cat([batch_pos, batch_neg], dim=0)
+        flops =  batch_query * batch_doc.t()
+        return flops.mean()        
 
 class MarginMSELossSplade(nn.Module):
     """
