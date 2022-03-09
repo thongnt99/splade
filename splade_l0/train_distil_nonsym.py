@@ -51,7 +51,7 @@ num_epochs = args.epochs  # Number of epochs we want to train
 
 # Load our embedding model
 logging.info("Create new SBERT model")
-word_embedding_model = models.MLMTransformer(model_name, max_seq_length=max_seq_length, freeze_vocab=args.freeze_vocab)
+word_embedding_model = models.MLMTransformer(model_name, max_seq_length=max_seq_length)
 model = SentenceTransformer(modules=[word_embedding_model])
 
 model_save_path = f'output/distilSplade_l0_nonsym_{args.lambda_reg}_{model_name.replace("/", "-")}-batch_size_{train_batch_size}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
