@@ -84,7 +84,7 @@ class Splade_Pooling(nn.Module):
         token_embeddings = features['token_embeddings']
         attention_mask = features['attention_mask']
         ## Pooling strategy
-        sentence_embedding, _ = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1, keepdim=True)
+        sentence_embedding, _ = torch.max(torch.log(1 + torch.relu(token_embeddings)) * attention_mask.unsqueeze(-1), dim=1)
         # l_0 = self.ste(sentence_embedding)
         l_0 = torch.nn.functional.tanh(sentence_embedding)
         features.update({'sentence_embedding': sentence_embedding, "l_0": l_0})
