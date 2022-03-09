@@ -47,11 +47,46 @@ class FLOPS:
         return torch.sum(torch.mean(torch.abs(batch_rep), dim=0) ** 2)
 
 class NonSymLoss:    
-    def __call__(self, batch_query, batch_pos, batch_neg):
-        batch_doc = torch.cat([batch_pos, batch_neg], dim=0)
-        flops =  batch_query * batch_doc.t()
-        return flops.mean()        
+    """
+    """
+    def __init__(self, model, similarity_fct = pairwise_dot_score, lambda_reg=1e-3):
+        """
+        :param model: SentenceTransformerModel
+        :param similarity_fct:  Which similarity function to use
+        """
+        super(NonSymLoss, self).__init__()
+        self.model = model
+        self.similarity_fct = similarity_fct
+        self.loss_fct = nn.MSELoss()
+        self.lambda_reg = lambda_reg        
 
+    def forward(self, sentence_features: Iterable[Dict[str, Tensor]], labels: Tensor):
+        # sentence_features: query, positive passage, negative passage
+        features = [self.model(sentence_feature) for sentence_feature in sentence_features]
+        reps = [f['sentence_embedding'] for f in features]
+        sels = [f['l_0'] for f in features]
+        
+        embeddings_query = reps[0]
+        l0_query = sels[0]
+        embeddings_pos = reps[1]
+        l0_pos = sels[1]
+        embeddings_neg = reps[2]
+        l0_neg = sels[2]
+
+        scores_pos = self.similarity_fct(embeddings_query, embeddings_pos)
+        scores_neg = self.similarity_fct(embeddings_query, embeddings_neg)
+        margin_pred = scores_pos - scores_neg
+            
+        flops =  torch.mm(l0_query, torch.cat([l0_pos, l0_neg], dim=0).t()).mean()
+        sparse_loss = self.loss_fct(margin_pred, labels)
+
+        log_obj = {
+            "loss": sparse_loss.item(),
+            "flops": flops.item(),            
+        }
+        print(json.dumps(log_obj))
+        return sparse_loss + flops
+                                                                                                                                                                                                                                                                        
 class MarginMSELossSplade(nn.Module):
     """
     Compute the MSE loss between the |sim(Query, Pos) - sim(Query, Neg)| and |gold_sim(Q, Pos) - gold_sim(Query, Neg)|
