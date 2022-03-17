@@ -1,6 +1,7 @@
 #FROM Sentence-BERT: (https://github.com/UKPLab/sentence-transformers/blob/afee883a17ab039120783fd0cffe09ea979233cf/sentence_transformers/losses/MultipleNegativesRankingLoss.py) (https://github.com/UKPLab/sentence-transformers/blob/afee883a17ab039120783fd0cffe09ea979233cf/sentence_transformers/losses/MarginMSELoss.py) (https://github.com/UKPLab/sentence-transformers/blob/afee883a17ab039120783fd0cffe09ea979233cf/sentence_transformers/util.py) with minimal changes.
 #Original License APACHE2
 
+from heapq import merge
 import torch
 from torch import nn, Tensor
 from typing import Iterable, Dict
@@ -76,10 +77,11 @@ class NonSymLoss(nn.Module):
         scores_pos = self.similarity_fct(embeddings_query, embeddings_pos)
         scores_neg = self.similarity_fct(embeddings_query, embeddings_neg)
         margin_pred = scores_pos - scores_neg
-            
-        flops =  torch.mm(l0_query, torch.cat([l0_pos, l0_neg], dim=0).t()).mean()
+        merged = torch.cat([l0_pos, l0_neg], dim=0)
+        # activation ratio of the inverted matrix
+        flops =  torch.mm(l0_query, merged.t()).sum(dim=1)/merged.numel()
+        flops = (flops**2).sum()
         sparse_loss = self.loss_fct(margin_pred, labels)
-
         log_obj = {
             "loss": sparse_loss.item(),
             "flops": flops.item(), 
